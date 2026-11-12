@@ -553,8 +553,8 @@ function dayMap() {
   S.entries.forEach(function (e) {
     if (!/^\d{4}-\d{2}-\d{2}/.test(e.date)) return;
     var d = new Date(e.date.slice(0, 10) + 'T00:00:00');
-    var end = /^\d{4}-\d{2}-\d{2}/.test(e.endDate || '') ? new Date(e.endDate.slice(0, 10) + 'T00:00:00') : d;
-    if (end < d) end = d;
+    var end = /^\d{4}-\d{2}-\d{2}/.test(e.endDate || '') ? new Date(e.endDate.slice(0, 10) + 'T00:00:00') : new Date(d);
+    if (end < d) end = new Date(d);
     for (var n = 0; d <= end && n < 62; n++) { var k = ymd(d); (map[k] = map[k] || {})[e.type] = 1; d.setDate(d.getDate() + 1); }
   });
   return map;

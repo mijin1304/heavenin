@@ -1,7 +1,7 @@
 // 헤븐인 업무일정 앱 설치용 서비스워커
 // 화면 파일은 항상 최신본을 먼저 받고, 인터넷이 끊겼을 때만 저장본을 보여 줍니다.
 // 글과 사진 데이터는 저장하지 않습니다.
-var CACHE = 'heavenin-v1';
+var CACHE = 'heavenin-v2';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon.png'];
 
 self.addEventListener('install', function (e) {
@@ -18,7 +18,7 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(req).then(function (res) {
+    fetch(req, { cache: 'no-cache' }).then(function (res) { // 브라우저 임시 저장본 대신 서버의 최신 화면을 확인합니다
       var copy = res.clone();
       caches.open(CACHE).then(function (c) { c.put(req, copy); });
       return res;

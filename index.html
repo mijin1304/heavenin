@@ -108,6 +108,17 @@
   .pick { position: relative; width: 92px; height: 92px; flex: none; }
   .pick img { width: 100%; height: 100%; border-radius: 14px; object-fit: cover; }
   .pick .x { position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; border-radius: 50%; background: var(--red); color: #fff; font-size: 15px; }
+  .flist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .fitem { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(255,255,255,.62); border: 1px solid var(--line); font-size: 14px; }
+  .fitem .fn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fitem small { flex: none; color: var(--sub); font-size: 12px; }
+  .fitem .x { flex: none; width: 28px; height: 28px; border-radius: 50%; font-size: 15px; }
+  .files { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .fdl { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 1px solid var(--line); background: rgba(255,255,255,.6); border-radius: 14px; padding: 10px 12px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .fdl:hover { background: rgba(255,255,255,.9); }
+  .fdl span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+  .fdl small { flex: none; color: var(--sub); font-size: 12px; pointer-events: none; }
+  .fdl i { font-style: normal; pointer-events: none; }
   .addph { width: 92px; height: 92px; border-radius: 14px; border: 1.5px dashed rgba(90,98,130,.5); display: grid; place-items: center; color: var(--sub); font-size: 14px; cursor: pointer; flex: none; text-align: center; background: rgba(255,255,255,.5); }
   .primary { width: 100%; height: 54px; border: 0; border-radius: 16px; background: var(--navy); color: #fff; font: inherit; font-size: 17px; margin-top: 18px; cursor: pointer; }
   .primary:disabled { opacity: .55; }
@@ -456,6 +467,13 @@
     <div class="thumbs" id="picks" style="margin-top:0;padding-top:6px"></div>
     <input type="file" id="file" accept="image/*" multiple class="hide">
 
+    <div class="only-total">
+      <label class="f">파일 첨부 (최대 10개 · 파일당 10MB)</label>
+      <div class="flist" id="fFiles"></div>
+      <button class="mini" type="button" id="btnAddFile">＋ 파일 추가</button>
+      <input type="file" id="attach" multiple class="hide">
+    </div>
+
     <label class="f">작성자</label><input id="fAuthor" list="dlWorker" placeholder="이름">
     <button class="primary" id="btnSave">등록하기</button>
   </section>
@@ -467,7 +485,7 @@
 
 <script>
 var S = { code: '', cfg: { workers: [], clients: [], units: [] }, entries: [], tab: '전체', q: '', upc: false, imgs: {} };
-var F = { id: '', type: '시공일정', keep: [], news: [], picked: {} };
+var F = { id: '', type: '시공일정', keep: [], news: [], picked: {}, fkeep: [], fnews: [] };
 var $ = function (id) { return document.getElementById(id); };
 var WD = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -563,7 +581,7 @@ function render() {
     return '<article class="card glass" data-id="' + esc(e.id) + '">' +
       '<div class="head"><span class="badge b-' + esc(e.type) + '">' + esc(e.type) + '</span><span class="date">' + esc(range) + '</span>' + (dd ? '<span class="dday">' + dd + '</span>' : '') + '</div>' +
       '<h2>' + esc(e.site || e.company || e.type) + '</h2><dl>' + d.join('') + '</dl>' +
-      (th ? '<div class="thumbs">' + th + '</div>' : '') +
+      (th ? '<div class="thumbs">' + th + '</div>' : '') + fileHtml(e) +
       '<div class="acts"><span class="by">' + esc(e.author || '') + (e.created ? ' · ' + esc(e.created) : '') + '</span>' +
       '<button class="mini" data-a="cmt">댓글' + ((e.comments || []).length ? ' ' + e.comments.length : '') + '</button><button class="mini" data-a="copy">복사</button><button class="mini" data-a="edit">수정</button><button class="mini danger" data-a="del">삭제</button></div>' + cmtHtml(e) + '</article>';
   }).join('');
@@ -998,6 +1016,7 @@ $('list').addEventListener('click', function (ev) {
   var card = ev.target.closest('article'); if (!card) return;
   var e = S.entries.filter(function (x) { return x.id === card.dataset.id; })[0]; if (!e) return;
   if (ev.target.classList.contains('ph')) { view(ev.target.dataset.f, ev.target.src); return; }
+  var fb = ev.target.closest('.fdl'); if (fb) { getAttach(fb); return; }
   var a = ev.target.dataset.a;
   if (cmtAction(a, ev.target, card, e)) return;
   if (a === 'copy') {
@@ -1099,9 +1118,67 @@ $('file').onchange = function () {
   }, Promise.resolve());
 };
 
+// 첨부파일: 웹앱에만 보관하고 구글시트에는 적지 않습니다.
+function fsize(n) { n = +n || 0; return n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'; }
+function ficon(name) {
+  var x = String(name).split('.').pop().toLowerCase();
+  return /^(pdf)$/.test(x) ? '📕' : /^(xlsx?|csv)$/.test(x) ? '📊' : /^(docx?|hwpx?|txt)$/.test(x) ? '📝' : /^(pptx?)$/.test(x) ? '📙' : /^(zip|rar|7z)$/.test(x) ? '🗜️' : /^(jpe?g|png|gif|heic|webp)$/.test(x) ? '🖼️' : /^(dwg|dxf)$/.test(x) ? '📐' : '📎';
+}
+function fileHtml(e) {
+  if (!e.files || !e.files.length) return '';
+  return '<div class="files">' + e.files.map(function (f) {
+    return '<button class="fdl" data-fid="' + esc(f.id) + '" data-name="' + esc(f.name) + '"><i>' + ficon(f.name) + '</i><span>' + esc(f.name) + '</span><small>' + fsize(f.size) + ' · 받기</small></button>';
+  }).join('') + '</div>';
+}
+function getAttach(b) {
+  if (b.disabled) return;
+  var small = b.querySelector('small'), was = small.textContent;
+  b.disabled = true; small.textContent = '받는 중…';
+  call('getFile', b.dataset.fid).then(function (r) {
+    var bin = atob(r.data), u8 = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([u8], { type: r.mime || 'application/octet-stream' }));
+    var a = document.createElement('a'); a.href = url; a.download = r.name || b.dataset.name; a.target = '_self';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }).catch(function (err) { toast('파일을 받지 못했습니다: ' + (err && err.message || err)); })
+    .then(function () { b.disabled = false; small.textContent = was; });
+}
+function drawFiles() {
+  $('fFiles').innerHTML = F.fkeep.map(function (f, i) {
+    return '<div class="fitem"><span>' + ficon(f.name) + '</span><span class="fn">' + esc(f.name) + '</span><small>' + fsize(f.size) + '</small><button class="x" type="button" data-fk="' + i + '">×</button></div>';
+  }).join('') + F.fnews.map(function (f, i) {
+    return '<div class="fitem"><span>' + ficon(f.name) + '</span><span class="fn">' + esc(f.name) + '</span><small>' + fsize(f.size) + ' · 새 파일</small><button class="x" type="button" data-fn="' + i + '">×</button></div>';
+  }).join('');
+}
+$('fFiles').addEventListener('click', function (ev) {
+  var b = ev.target.closest('.x'); if (!b) return;
+  if (b.dataset.fk !== undefined) F.fkeep.splice(+b.dataset.fk, 1); else F.fnews.splice(+b.dataset.fn, 1);
+  drawFiles();
+});
+$('btnAddFile').onclick = function () { $('attach').click(); };
+$('attach').onchange = function () {
+  var list = Array.prototype.slice.call(this.files); this.value = '';
+  list.reduce(function (chain, file) {
+    return chain.then(function () {
+      if (F.fkeep.length + F.fnews.length >= 10) { toast('파일은 글마다 최대 10개까지 첨부할 수 있습니다'); return; }
+      if (file.size > 10 * 1024 * 1024) { toast('10MB가 넘는 파일은 첨부할 수 없습니다: ' + file.name); return; }
+      var total = F.fnews.reduce(function (s, f) { return s + f.size; }, 0);
+      if (total + file.size > 25 * 1024 * 1024) { toast('한 번에 올리는 파일은 합계 25MB까지입니다'); return; }
+      return new Promise(function (res) {
+        var rd = new FileReader();
+        rd.onload = function () { F.fnews.push({ name: file.name, mime: file.type || 'application/octet-stream', size: file.size, data: String(rd.result).split(',')[1] || '' }); drawFiles(); res(); };
+        rd.onerror = function () { toast('열 수 없는 파일이 있습니다: ' + file.name); res(); };
+        rd.readAsDataURL(file);
+      });
+    });
+  }, Promise.resolve());
+};
+
 function openForm(e) {
   if (S.user && S.user.role !== 'editor') { toast('보기 권한만 있어 글을 쓰거나 고칠 수 없습니다'); return; }
   F.id = e ? e.id : ''; F.keep = e ? e.photos.slice() : []; F.news = [];
+  F.fkeep = e && e.files ? e.files.slice() : []; F.fnews = []; drawFiles();
   $('ftitle').textContent = e ? '글 수정' : '새 글 쓰기';
   $('btnSave').textContent = e ? '수정 저장' : '등록하기';
   $('seg').classList.toggle('hide', !!e);
@@ -1171,8 +1248,12 @@ $('btnSave').onclick = function () {
     chief: $('fChief').value, workers: workers.join(', '), note: $('fNote').value,
     author: $('fAuthor').value.trim(), keep: F.keep.map(function (p) { return p.f; }), photos: F.news
   };
+  if (!bond) {
+    d.keepFiles = F.fkeep.map(function (f) { return f.id; });
+    d.files = F.fnews.map(function (f) { return { name: f.name, mime: f.mime, data: f.data }; });
+  }
   store('hia_author', d.author);
-  var btn = $('btnSave'); btn.disabled = true; btn.textContent = F.news.length ? '사진 올리는 중…' : '저장 중…';
+  var btn = $('btnSave'); btn.disabled = true; btn.textContent = (!bond && F.fnews.length) ? '파일 올리는 중…' : F.news.length ? '사진 올리는 중…' : '저장 중…';
   call('saveEntry', d).then(function () {
     $('bg').classList.remove('on'); toast(F.id ? '수정했습니다' : '등록했습니다. 시트에 정리되었습니다'); load();
   }).catch(function (e) { toast('저장하지 못했습니다: ' + (e && e.message || e)); })

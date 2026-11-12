@@ -15,6 +15,8 @@
 <link rel="icon" type="image/png" href="favicon.png?v=2">
 <base target="_blank">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
@@ -490,7 +492,6 @@
   </section>
 </div>
 
-<datalist id="dlClient"></datalist><datalist id="dlWorker"></datalist><datalist id="dlUnit"></datalist>
 <div class="viewer" id="viewer"><img id="viewImg" alt="사진"></div>
 <div class="toast" id="toast"></div>
 <div class="sug" id="sug"></div>
@@ -533,11 +534,9 @@ function load(cb) {
   call('getInit').then(function (r) {
     S.cfg = r.config; S.entries = r.entries;
     S.user = r.user || null;
-    loadBible(); applyLayout();
+    if (r.bible) showBible(r.bible); else loadBible();
+    applyLayout();
     document.body.classList.toggle('role-viewer', !!(S.user && S.user.role !== 'editor'));
-    $('dlClient').innerHTML = S.cfg.clients.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
-    $('dlWorker').innerHTML = S.cfg.workers.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
-    $('dlUnit').innerHTML = S.cfg.units.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     render();
     if (cb) cb(true);
   }).catch(function (e) {
@@ -599,21 +598,42 @@ function render() {
   }).join('');
   loadThumbs();
 }
+// 미리보기 사진은 한 번 받으면 이 기기에 보관해 두고 다시 받지 않습니다 (데이터 절약).
+var IMGC = 'hia-thumbs-v1';
+function thumbStore(m) {
+  if (!window.caches) return;
+  caches.open(IMGC).then(function (c) {
+    Object.keys(m).forEach(function (id) { if (/^data:image\//.test(m[id])) c.put('/_t/' + id, new Response(m[id])); });
+  }).catch(function () {});
+}
+function thumbLoad(ids) {
+  if (!window.caches || !ids.length) return Promise.resolve({});
+  return caches.open(IMGC).then(function (c) {
+    return Promise.all(ids.map(function (id) {
+      return c.match('/_t/' + id).then(function (r) { return r ? r.text().then(function (s) { return [id, s]; }) : null; });
+    }));
+  }).then(function (a) { var m = {}; a.forEach(function (x) { if (x) m[x[0]] = x[1]; }); return m; }).catch(function () { return {}; });
+}
+function showThumbs(m) {
+  Object.keys(m).forEach(function (id) { S.imgs[id] = m[id]; });
+  document.querySelectorAll('img.ph').forEach(function (im) { if (m[im.dataset.t]) im.src = m[im.dataset.t]; });
+}
 function loadThumbs() {
   var need = [];
   document.querySelectorAll('img.ph').forEach(function (im) {
     var id = im.dataset.t;
     if (S.imgs[id]) im.src = S.imgs[id]; else if (need.indexOf(id) < 0) need.push(id);
   });
-  (function next() {
-    if (!need.length) return;
-    var batch = need.splice(0, 10);
-    call('getImages', batch).then(function (m) {
-      Object.keys(m).forEach(function (id) { S.imgs[id] = m[id]; });
-      document.querySelectorAll('img.ph').forEach(function (im) { if (m[im.dataset.t]) im.src = m[im.dataset.t]; });
-      next();
-    }).catch(function () {});
-  })();
+  if (!need.length) return;
+  thumbLoad(need).then(function (local) {
+    showThumbs(local);
+    need = need.filter(function (id) { return !local[id]; });
+    var next = function () {
+      if (!need.length || !S.code) return;
+      call('getImages', need.splice(0, 12)).then(function (m) { showThumbs(m); thumbStore(m); next(); }).catch(function () {});
+    };
+    next(); next(); // 두 묶음씩 동시에 받습니다
+  });
 }
 
 /* ---------- 댓글 ---------- */
@@ -774,13 +794,15 @@ function drawWx(p, w) {
 $('wxForm').onsubmit = function (ev) { ev.preventDefault(); var v = $('wxCity').value.trim(); if (v) { loadWx(v); this.closest('.w').classList.remove('edit'); } };
 
 // 성경말씀: 대한성서공회 '매일성경묵상'을 하루 한 번 받아옵니다.
+function showBible(b) {
+  S.bibleDate = today();
+  $('bibleBody').innerHTML = '<p class="bv">' + esc(b.text) + '</p><div class="bref">' + esc(b.ref) + ' · 개역개정</div>' +
+    '<a class="blink" href="' + esc(b.url) + '" target="_blank" rel="noopener">묵상 내용 보기 →</a>';
+}
 function loadBible() {
   if (!S.code || !sideMQ.matches || S.bibleDate === today()) return;
   S.bibleDate = today();
-  call('getBible').then(function (b) {
-    $('bibleBody').innerHTML = '<p class="bv">' + esc(b.text) + '</p><div class="bref">' + esc(b.ref) + ' · 개역개정</div>' +
-      '<a class="blink" href="' + esc(b.url) + '" target="_blank" rel="noopener">묵상 내용 보기 →</a>';
-  }).catch(function () {
+  call('getBible').then(showBible).catch(function () {
     S.bibleDate = '';
     $('bibleBody').innerHTML = '<div class="wx-msg">말씀을 불러오지 못했습니다. <a href="https://bible.bskorea.or.kr/" target="_blank" rel="noopener">대한성서공회에서 보기</a></div>';
   });
@@ -1326,7 +1348,8 @@ window.addEventListener('resize', sugPlace);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', sugPlace);
 
 // 접속코드는 저장하지 않습니다. 웹앱을 열 때마다 입력해야 내용이 보입니다.
-try { localStorage.removeItem('hia_code'); } catch (e) {}
+// 접속코드를 입력하는 동안 서버를 미리 깨워 두어 들어가는 시간을 줄입니다.
+fetch(API + '?ping=1', { mode: 'no-cors' }).catch(function () {});
 $('gateForm').onsubmit = function (ev) {
   ev.preventDefault();
   var box = $('gateCode'), btn = $('gateBtn'), v = box.value.trim();

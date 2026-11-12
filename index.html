@@ -153,6 +153,8 @@
   .w-b { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
   .w-b::-webkit-scrollbar { display: none; }
   .w.dragging { opacity: .35; }
+  .w-ghost { position: fixed; z-index: 60; margin: 0; pointer-events: none; opacity: .94; transform: rotate(1.2deg) scale(1.02); box-shadow: 0 24px 60px rgba(40,50,110,.28); }
+  body.wdragging, body.wdragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
   .w.ins-top { box-shadow: 0 -4px 0 0 var(--blue), 0 10px 30px rgba(40,50,110,.10); }
   .w.ins-bot { box-shadow: 0 4px 0 0 var(--blue), 0 10px 30px rgba(40,50,110,.10); }
   .w.ins-left { box-shadow: -4px 0 0 0 var(--blue), 0 10px 30px rgba(40,50,110,.10); }
@@ -876,7 +878,7 @@ $('wxEdit').onclick = function () {
 var WDEF = { cal: ['2x2', '2x3'], calc: ['2x2', '1x2'], memo: ['2x1', '2x2', '1x1', '1x2'], wx: ['2x2', '2x1', '1x1'], fx: ['2x1', '2x2', '1x1'], bible: ['2x2', '2x1', '1x1'] };
 var WHOME = { l: ['cal', 'calc', 'memo'], r: ['wx', 'fx', 'bible'] };
 var WG = { l: $('wl'), r: $('wr') }, WDRAG = null;
-function wEl(id) { return document.querySelector('.w[data-w="' + id + '"]'); }
+function wEl(id) { return document.querySelector('.wgrid > .w[data-w="' + id + '"]'); }
 function wSize(w, s) {
   var list = WDEF[w.dataset.w];
   if (list.indexOf(s) < 0) s = list[0];
@@ -903,49 +905,63 @@ function wClear() {
   document.querySelectorAll('.ins-top,.ins-bot,.ins-left,.ins-right').forEach(function (x) { x.classList.remove('ins-top', 'ins-bot', 'ins-left', 'ins-right'); });
   WG.l.classList.remove('over'); WG.r.classList.remove('over');
 }
-function wSpot(ev) {
-  var t = ev.target.closest('.w');
-  if (!t || t === WDRAG) return null;
+function wSpot(t, x, y) {
   var r = t.getBoundingClientRect(), g = t.parentNode.getBoundingClientRect();
   var horiz = r.width < g.width * 0.75;
-  var before = horiz ? ev.clientX < r.left + r.width / 2 : ev.clientY < r.top + r.height / 2;
-  return { t: t, before: before, cls: horiz ? (before ? 'ins-left' : 'ins-right') : (before ? 'ins-top' : 'ins-bot') };
+  var before = horiz ? x < r.left + r.width / 2 : y < r.top + r.height / 2;
+  return { before: before, cls: horiz ? (before ? 'ins-left' : 'ins-right') : (before ? 'ins-top' : 'ins-bot') };
 }
 document.querySelectorAll('.w').forEach(function (w) {
-  var h = w.querySelector('.w-h');
-  h.addEventListener('mousedown', function (ev) { if (!ev.target.closest('button, input')) w.draggable = true; });
-  w.addEventListener('dragstart', function (ev) {
-    if (!w.draggable) { ev.preventDefault(); return; }
-    WDRAG = w; ev.dataTransfer.effectAllowed = 'move';
-    try { ev.dataTransfer.setData('text/plain', w.dataset.w); } catch (e) {}
-    setTimeout(function () { w.classList.add('dragging'); }, 0);
+  w.querySelector('.w-h').addEventListener('pointerdown', function (ev) {
+    if (ev.button !== 0 || ev.target.closest('button, input')) return;
+    var r = w.getBoundingClientRect();
+    WDRAG = { w: w, x0: ev.clientX, y0: ev.clientY, dx: ev.clientX - r.left, dy: ev.clientY - r.top, on: false, to: null };
+    ev.preventDefault();
   });
-  w.addEventListener('dragend', function () { w.draggable = false; w.classList.remove('dragging'); WDRAG = null; wClear(); });
   w.querySelector('.w-sz').addEventListener('click', function () {
     var list = WDEF[w.dataset.w];
     wSize(w, list[(list.indexOf(w.dataset.size) + 1) % list.length]);
     saveLayout();
   });
 });
-document.addEventListener('mouseup', function () { document.querySelectorAll('.w[draggable="true"]').forEach(function (w) { if (w !== WDRAG) w.draggable = false; }); });
-['l', 'r'].forEach(function (k) {
-  var g = WG[k];
-  g.addEventListener('dragover', function (ev) {
-    if (!WDRAG) return;
-    ev.preventDefault(); ev.dataTransfer.dropEffect = 'move';
-    wClear();
-    var s = wSpot(ev);
-    if (s) s.t.classList.add(s.cls); else if (!ev.target.closest('.w')) g.classList.add('over');
-  });
-  g.addEventListener('drop', function (ev) {
-    if (!WDRAG) return;
-    ev.preventDefault();
-    var s = wSpot(ev);
-    if (s) g.insertBefore(WDRAG, s.before ? s.t : s.t.nextSibling);
-    else if (!ev.target.closest('.w')) g.appendChild(WDRAG);
-    wClear(); saveLayout();
-  });
+document.addEventListener('pointermove', function (ev) {
+  var d = WDRAG;
+  if (!d) return;
+  if (!d.on) {
+    if (Math.abs(ev.clientX - d.x0) + Math.abs(ev.clientY - d.y0) < 6) return;
+    var r = d.w.getBoundingClientRect();
+    d.on = true;
+    d.ghost = d.w.cloneNode(true);
+    d.ghost.querySelectorAll('[id]').forEach(function (x) { x.removeAttribute('id'); });
+    d.ghost.classList.add('w-ghost');
+    d.ghost.style.width = r.width + 'px'; d.ghost.style.height = r.height + 'px';
+    document.body.appendChild(d.ghost);
+    d.w.classList.add('dragging'); document.body.classList.add('wdragging');
+  }
+  d.ghost.style.left = (ev.clientX - d.dx) + 'px'; d.ghost.style.top = (ev.clientY - d.dy) + 'px';
+  wClear(); d.to = null;
+  var el = document.elementFromPoint(ev.clientX, ev.clientY), side = el && el.closest('.side');
+  if (!side) return;
+  var g = side.querySelector('.wgrid'), t = el.closest('.wgrid > .w');
+  if (t && t !== d.w) { var s = wSpot(t, ev.clientX, ev.clientY); t.classList.add(s.cls); d.to = { g: g, t: t, before: s.before }; }
+  else if (!t) { g.classList.add('over'); d.to = { g: g }; }
 });
+function wEnd(ok) {
+  var d = WDRAG;
+  WDRAG = null;
+  if (!d) return;
+  if (d.on) {
+    if (ok && d.to) {
+      if (d.to.t) d.to.g.insertBefore(d.w, d.to.before ? d.to.t : d.to.t.nextSibling); else d.to.g.appendChild(d.w);
+      saveLayout();
+    }
+    d.ghost.remove(); d.w.classList.remove('dragging'); document.body.classList.remove('wdragging');
+  }
+  wClear();
+}
+document.addEventListener('pointerup', function () { wEnd(true); });
+document.addEventListener('pointercancel', function () { wEnd(false); });
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && WDRAG) wEnd(false); });
 $('wReset').onclick = function () {
   try { localStorage.removeItem(lkey()); } catch (e) {}
   applyLayout(); toast('위젯 배치를 처음 상태로 되돌렸습니다');

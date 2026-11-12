@@ -119,6 +119,8 @@
   .viewer.on { display: grid; }
   .viewer img { max-width: 96vw; max-height: 92vh; border-radius: 12px; }
   .hide { display: none !important; }
+  /* 뷰어 권한: 글쓰기 · 수정 · 삭제 버튼을 숨깁니다 */
+  body.viewer .fab, body.viewer [data-a="edit"], body.viewer [data-a="del"] { display: none !important; }
 
   /* ---------- 랜딩(접속) 화면 ---------- */
   .gate {
@@ -298,6 +300,8 @@ function load(cb) {
   $('sub').textContent = '불러오는 중…';
   call('getInit').then(function (r) {
     S.cfg = r.config; S.entries = r.entries;
+    S.user = r.user || null;
+    document.body.classList.toggle('viewer', !!(S.user && S.user.role !== 'editor'));
     $('dlClient').innerHTML = S.cfg.clients.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     $('dlWorker').innerHTML = S.cfg.workers.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     $('dlUnit').innerHTML = S.cfg.units.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
@@ -313,6 +317,7 @@ function load(cb) {
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock() {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
+  S.user = null; document.body.classList.remove('viewer');
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   $('gateMsg').textContent = '접속코드를 다시 입력해 주세요';
 }
@@ -330,7 +335,7 @@ function itemText(i) { return i.name + (i.qty ? ' ' + i.qty + (i.unit || '') : '
 function render() {
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
-  $('sub').textContent = '글 ' + rows.length + '건';
+  $('sub').textContent = (S.user ? S.user.name + ' · ' + (S.user.role === 'editor' ? '편집자' : '뷰어') + ' · ' : '') + '글 ' + rows.length + '건';
   if (!rows.length) { $('list').innerHTML = '<div class="empty glass card">표시할 글이 없습니다.</div>'; return; }
   var t = today();
   $('list').innerHTML = rows.map(function (e) {
@@ -486,6 +491,7 @@ $('file').onchange = function () {
 };
 
 function openForm(e) {
+  if (S.user && S.user.role !== 'editor') { toast('보기 권한만 있어 글을 쓰거나 고칠 수 없습니다'); return; }
   F.id = e ? e.id : ''; F.keep = e ? e.photos.slice() : []; F.news = [];
   $('ftitle').textContent = e ? '글 수정' : '새 글 쓰기';
   $('btnSave').textContent = e ? '수정 저장' : '등록하기';
@@ -495,7 +501,7 @@ function openForm(e) {
   $('fCompany').value = e ? (e.company || '') : ''; $('fSite').value = e ? (e.site || '') : '';
   $('fAddr').value = e ? (e.address || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
   $('fNote').value = e ? (e.note || '') : ''; $('pasteTxt').value = '';
-  $('fAuthor').value = e ? (e.author || '') : store('hia_author');
+  $('fAuthor').value = e ? (e.author || '') : (S.user ? S.user.name : store('hia_author'));
   var ws = e && e.workers ? e.workers.split(/\s*,\s*/).filter(String) : [];
   drawWorkers(ws.filter(function (w) { return S.cfg.workers.indexOf(w) >= 0; }));
   $('fWorkerEtc').value = ws.filter(function (w) { return S.cfg.workers.indexOf(w) < 0; }).join(', ');

@@ -98,7 +98,18 @@
   .seg { display: flex; gap: 6px; margin-bottom: 14px; }
   .seg .chip { flex: 1; text-align: center; font-size: 15px; padding: 11px 6px; }
   label.f { display: block; font-size: 13.5px; color: var(--sub); margin: 12px 0 5px; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .row2 > * { min-width: 0; }
+  /* 모바일(아이폰) 날짜 칸이 옆 칸과 겹치지 않게 */
+  input[type="date"] { display: block; min-width: 0; max-width: 100%; min-height: 48px; -webkit-appearance: none; appearance: none; text-align: left; }
+  input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  input[type="date"]::-webkit-calendar-picker-indicator { margin-left: 2px; }
+  @media (max-width: 420px) { .row2 label.f { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } input[type="date"] { padding-left: 10px; padding-right: 8px; font-size: 15px; } }
+  /* 선택 목록 (설정 탭 목록) — PC · 모바일 공통 */
+  .sug { position: fixed; z-index: 70; display: none; max-height: 240px; overflow-y: auto; padding: 5px; border-radius: 16px; background: rgba(255,255,255,.94); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid var(--line); box-shadow: 0 16px 36px rgba(40,50,110,.2); -webkit-overflow-scrolling: touch; }
+  .sug.on { display: block; }
+  .sug button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 11px 12px; border-radius: 11px; font: inherit; font-size: 15px; color: var(--ink); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sug button:hover, .sug button.act { background: rgba(63,111,224,.1); }
   .item { display: grid; grid-template-columns: 1fr 74px 78px 96px 38px; gap: 6px; margin-bottom: 6px; }
   .item.nob { grid-template-columns: 1fr 84px 84px 38px; }
   .item input, .item select { padding: 11px 9px; min-width: 0; }
@@ -444,7 +455,7 @@
       <div class="only-total"><label class="f">종료일 (여러 날일 때)</label><input type="date" id="fEnd"></div>
     </div>
     <div class="row2 only-total">
-      <div><label class="f">거래처</label><input id="fClient" list="dlClient" placeholder="예: 유앤어스"></div>
+      <div><label class="f">거래처</label><input id="fClient" data-sug="clients" autocomplete="off" placeholder="예: 유앤어스"></div>
       <div><label class="f">담당자</label><input id="fManager" placeholder="예: 노태훈 차장"></div>
     </div>
     <div class="only-total"><label class="f">업체명</label><input id="fCompany"></div>
@@ -474,7 +485,7 @@
       <input type="file" id="attach" multiple class="hide">
     </div>
 
-    <label class="f">작성자</label><input id="fAuthor" list="dlWorker" placeholder="이름">
+    <label class="f">작성자</label><input id="fAuthor" data-sug="workers" autocomplete="off" placeholder="이름">
     <button class="primary" id="btnSave">등록하기</button>
   </section>
 </div>
@@ -482,6 +493,7 @@
 <datalist id="dlClient"></datalist><datalist id="dlWorker"></datalist><datalist id="dlUnit"></datalist>
 <div class="viewer" id="viewer"><img id="viewImg" alt="사진"></div>
 <div class="toast" id="toast"></div>
+<div class="sug" id="sug"></div>
 
 <script>
 var S = { code: '', cfg: { workers: [], clients: [], units: [] }, entries: [], tab: '전체', q: '', upc: false, imgs: {} };
@@ -1057,12 +1069,12 @@ function addItem(it) {
   it = it || {};
   var bond = F.type === '화성본드';
   var div = document.createElement('div'); div.className = 'item' + (bond ? ' nob' : '');
-  // 화성본드는 설정 탭 I열의 품목/규격 중에서 고릅니다.
+  // 화성본드는 설정 탭 D열의 품목/규격 중에서 고릅니다.
   var bondList = bond && S.cfg.bondItems && S.cfg.bondItems.length ? S.cfg.bondItems : null;
   div.innerHTML = (bondList
     ? '<select class="i-name"><option value="">품목/규격 선택</option>' + bondList.map(function (b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') + '</select>'
     : '<input class="i-name" placeholder="' + (bond ? '예: 250본드' : '예: LVT 시공') + '">') +
-    '<input class="i-unit" list="dlUnit" placeholder="단위">' +
+    '<input class="i-unit" data-sug="units" autocomplete="off" placeholder="단위">' +
     '<input class="i-qty" inputmode="decimal" placeholder="수량">' +
     (bond ? '' : '<input class="i-price" inputmode="numeric" placeholder="단가">') + '<button title="내역 삭제">×</button>';
   var nm = div.querySelector('.i-name');
@@ -1259,6 +1271,59 @@ $('btnSave').onclick = function () {
   }).catch(function (e) { toast('저장하지 못했습니다: ' + (e && e.message || e)); })
     .then(function () { btn.disabled = false; btn.textContent = F.id ? '수정 저장' : '등록하기'; });
 };
+
+// 선택 목록: 설정 탭의 거래처 · 단위 · 인원을 눌러서 고릅니다 (아이폰에서도 보이도록 직접 그립니다).
+var SG = { inp: null, items: [], idx: -1, skip: false };
+function sugList(inp) {
+  var k = inp.dataset.sug, all = (S.cfg && S.cfg[k]) || [], q = inp.value.trim().toLowerCase();
+  if (!q) return all.slice();
+  var hit = all.filter(function (v) { return v.toLowerCase().indexOf(q) >= 0; });
+  return hit.length === 1 && hit[0].toLowerCase() === q ? [] : hit;
+}
+function sugPlace() {
+  var box = $('sug'), inp = SG.inp;
+  if (!inp || !box.classList.contains('on')) return;
+  var r = inp.getBoundingClientRect(), vv = window.visualViewport, vh = vv ? vv.height + vv.offsetTop : window.innerHeight;
+  if (r.bottom < 0 || r.top > vh) { sugHide(); return; }
+  var w = Math.max(r.width, 160), left = Math.min(r.left, window.innerWidth - w - 8);
+  box.style.left = Math.max(8, left) + 'px'; box.style.width = w + 'px';
+  var below = vh - r.bottom - 10, above = r.top - 10;
+  if (below < 160 && above > below) { box.style.top = ''; box.style.bottom = (window.innerHeight - r.top + 4) + 'px'; box.style.maxHeight = Math.min(240, above) + 'px'; }
+  else { box.style.bottom = ''; box.style.top = (r.bottom + 4) + 'px'; box.style.maxHeight = Math.min(240, Math.max(120, below)) + 'px'; }
+}
+function sugShow(inp) {
+  SG.inp = inp; SG.items = sugList(inp); SG.idx = -1;
+  var box = $('sug');
+  if (!SG.items.length) { sugHide(); return; }
+  box.innerHTML = SG.items.map(function (v, i) { return '<button type="button" data-i="' + i + '">' + esc(v) + '</button>'; }).join('');
+  box.classList.add('on'); box.scrollTop = 0; sugPlace();
+}
+function sugHide() { $('sug').classList.remove('on'); SG.idx = -1; }
+function sugPick(i) {
+  var inp = SG.inp, v = SG.items[i];
+  if (!inp || v == null) return;
+  inp.value = v; sugHide();
+  inp.dispatchEvent(new Event('change', { bubbles: true }));
+}
+$('sug').addEventListener('mousedown', function (ev) { ev.preventDefault(); });
+$('sug').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-i]'); if (b) sugPick(+b.dataset.i); });
+document.addEventListener('focusin', function (ev) { var t = ev.target; if (t.matches && t.matches('input[data-sug]')) sugShow(t); });
+document.addEventListener('input', function (ev) { var t = ev.target; if (t.matches && t.matches('input[data-sug]')) sugShow(t); });
+document.addEventListener('focusout', function (ev) {
+  if (ev.target === SG.inp) setTimeout(function () { if (document.activeElement !== SG.inp) sugHide(); }, 220);
+});
+document.addEventListener('keydown', function (ev) {
+  if (!SG.inp || ev.target !== SG.inp || !$('sug').classList.contains('on')) return;
+  var n = SG.items.length;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault(); SG.idx = (SG.idx + (ev.key === 'ArrowDown' ? 1 : -1) + n) % n;
+    $('sug').querySelectorAll('button').forEach(function (b, i) { b.classList.toggle('act', i === SG.idx); if (i === SG.idx) b.scrollIntoView({ block: 'nearest' }); });
+  } else if (ev.key === 'Enter' && SG.idx >= 0) { ev.preventDefault(); sugPick(SG.idx); }
+  else if (ev.key === 'Escape') sugHide();
+});
+window.addEventListener('scroll', function (ev) { if (ev.target !== $('sug')) sugPlace(); }, true);
+window.addEventListener('resize', sugPlace);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', sugPlace);
 
 // 접속코드는 저장하지 않습니다. 웹앱을 열 때마다 입력해야 내용이 보입니다.
 try { localStorage.removeItem('hia_code'); } catch (e) {}

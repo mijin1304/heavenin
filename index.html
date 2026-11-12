@@ -120,7 +120,24 @@
   .viewer img { max-width: 96vw; max-height: 92vh; border-radius: 12px; }
   .hide { display: none !important; }
   /* 뷰어 권한: 글쓰기 · 수정 · 삭제 버튼을 숨깁니다 */
-  body.role-viewer .fab, body.role-viewer [data-a="edit"], body.role-viewer [data-a="del"] { display: none !important; }
+  body.role-viewer .fab, body.role-viewer [data-a="edit"], body.role-viewer [data-a="del"], body.role-viewer [data-a="copy"] { display: none !important; }
+  /* 댓글 */
+  .clist { margin-top: 12px; padding-top: 4px; border-top: 1px solid rgba(120,130,180,.2); }
+  .cmt { padding: 9px 0; }
+  .cmt + .cmt { border-top: 1px dashed rgba(120,130,180,.2); }
+  .cmt-h { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); }
+  .cmt-h b { color: var(--ink); font-weight: 600; }
+  .cmt-h button { margin-left: auto; border: 0; background: none; color: var(--red); font: inherit; font-size: 12.5px; cursor: pointer; padding: 2px 4px; }
+  .cmt-t { margin-top: 3px; font-size: 15px; white-space: pre-wrap; word-break: break-word; }
+  .cmt .thumbs { margin-top: 8px; }
+  .cmt .thumbs img { width: 76px; height: 76px; }
+  .cbox { margin-top: 12px; }
+  .cbox textarea { min-height: 70px; }
+  .cpicks { margin-top: 6px; padding-top: 6px; }
+  .cpicks:empty { display: none; }
+  .cbtns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .mini.prim { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .mini:disabled { opacity: .55; }
 
   /* ---------- 랜딩(접속) 화면 ---------- */
   .gate {
@@ -335,7 +352,7 @@ function itemText(i) { return i.name + (i.qty ? ' ' + i.qty + (i.unit || '') : '
 function render() {
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
-  $('sub').textContent = (S.user ? S.user.name + ' · ' + (S.user.role === 'editor' ? '편집자' : '뷰어') + ' · ' : '') + '글 ' + rows.length + '건';
+  $('sub').textContent = S.user ? S.user.name + ' · ' + (S.user.role === 'editor' ? '편집자' : '뷰어') : '';
   if (!rows.length) { $('list').innerHTML = '<div class="empty glass card">표시할 글이 없습니다.</div>'; return; }
   var t = today();
   $('list').innerHTML = rows.map(function (e) {
@@ -359,7 +376,7 @@ function render() {
       '<h2>' + esc(e.site || e.company || e.type) + '</h2><dl>' + d.join('') + '</dl>' +
       (th ? '<div class="thumbs">' + th + '</div>' : '') +
       '<div class="acts"><span class="by">' + esc(e.author || '') + (e.created ? ' · ' + esc(e.created) : '') + '</span>' +
-      '<button class="mini" data-a="copy">복사</button><button class="mini" data-a="edit">수정</button><button class="mini danger" data-a="del">삭제</button></div></article>';
+      '<button class="mini" data-a="cmt">댓글' + ((e.comments || []).length ? ' ' + e.comments.length : '') + '</button><button class="mini" data-a="copy">복사</button><button class="mini" data-a="edit">수정</button><button class="mini danger" data-a="del">삭제</button></div>' + cmtHtml(e) + '</article>';
   }).join('');
   loadThumbs();
 }
@@ -378,6 +395,75 @@ function loadThumbs() {
       next();
     }).catch(function () {});
   })();
+}
+
+/* ---------- 댓글 ---------- */
+// 댓글은 뷰어를 포함한 모든 로그인 사용자가 글·사진으로 남길 수 있습니다.
+var CD = {};
+function cmtHtml(e) {
+  var me = S.user || {};
+  var list = (e.comments || []).map(function (c) {
+    var canDel = me.role === 'editor' || c.author === me.name;
+    var th = (c.photos || []).map(function (p) { return '<img class="ph" data-t="' + esc(p.t) + '" data-f="' + esc(p.f) + '" alt="사진">'; }).join('');
+    return '<div class="cmt"><div class="cmt-h"><b>' + esc(c.author) + '</b><span>' + esc(c.created) + '</span>' +
+      (canDel ? '<button data-a="cdel" data-c="' + esc(c.id) + '">삭제</button>' : '') + '</div>' +
+      (c.text ? '<div class="cmt-t">' + rich(c.text) + '</div>' : '') + (th ? '<div class="thumbs">' + th + '</div>' : '') + '</div>';
+  }).join('');
+  return (list ? '<div class="clist">' + list + '</div>' : '') +
+    '<div class="cbox hide"><textarea class="ctext" placeholder="댓글을 입력해 주세요"></textarea><div class="thumbs cpicks"></div>' +
+    '<div class="cbtns"><button class="mini" data-a="cph">사진 추가</button><button class="mini prim" data-a="csend">댓글 등록</button></div></div>';
+}
+function drawCPicks(card) {
+  var d = CD[card.dataset.id] || { photos: [] };
+  card.querySelector('.cpicks').innerHTML = d.photos.map(function (p, i) {
+    return '<div class="pick"><img src="data:image/jpeg;base64,' + p.thumb + '" alt=""><button class="x" data-a="cpx" data-i="' + i + '">×</button></div>';
+  }).join('');
+}
+var cFile = document.createElement('input');
+cFile.type = 'file'; cFile.accept = 'image/*'; cFile.multiple = true; cFile.className = 'hide';
+document.body.appendChild(cFile);
+var cTarget = null;
+cFile.onchange = function () {
+  var card = cTarget, files = Array.prototype.slice.call(this.files); this.value = '';
+  if (!card) return;
+  var d = CD[card.dataset.id] = CD[card.dataset.id] || { photos: [] };
+  var room = 5 - d.photos.length;
+  if (files.length > room) { toast('댓글 사진은 5장까지 올릴 수 있습니다'); files = files.slice(0, Math.max(room, 0)); }
+  files.reduce(function (chain, file) {
+    return chain.then(function () {
+      return new Promise(function (res) {
+        var url = URL.createObjectURL(file), im = new Image();
+        im.onload = function () { d.photos.push({ full: shrink(im, 1600, .82), thumb: shrink(im, 360, .7) }); URL.revokeObjectURL(url); drawCPicks(card); res(); };
+        im.onerror = function () { toast('열 수 없는 사진이 있습니다'); res(); };
+        im.src = url;
+      });
+    });
+  }, Promise.resolve());
+};
+function cmtAction(a, el, card, e) {
+  if (a === 'cmt') {
+    var box = card.querySelector('.cbox'); box.classList.toggle('hide');
+    if (!box.classList.contains('hide')) box.querySelector('textarea').focus();
+    return true;
+  }
+  if (a === 'cph') { cTarget = card; cFile.click(); return true; }
+  if (a === 'cpx') { var dp = CD[e.id]; if (dp) { dp.photos.splice(+el.dataset.i, 1); drawCPicks(card); } return true; }
+  if (a === 'csend') {
+    var text = card.querySelector('.ctext').value.trim(), d = CD[e.id] || { photos: [] };
+    if (!text && !d.photos.length) { toast('댓글 내용이나 사진을 넣어 주세요'); return true; }
+    el.disabled = true; el.textContent = d.photos.length ? '사진 올리는 중…' : '등록 중…';
+    call('addComment', { postId: e.id, kind: e.kind, type: e.type, site: e.site, text: text, photos: d.photos }).then(function () {
+      delete CD[e.id]; toast('댓글을 등록했습니다'); load();
+    }).catch(function (err) { toast('등록하지 못했습니다: ' + err.message); el.disabled = false; el.textContent = '댓글 등록'; });
+    return true;
+  }
+  if (a === 'cdel') {
+    if (el.dataset.sure !== '1') { el.dataset.sure = '1'; el.textContent = '정말 삭제?'; setTimeout(function () { el.dataset.sure = ''; el.textContent = '삭제'; }, 3500); return true; }
+    el.disabled = true;
+    call('deleteComment', el.dataset.c).then(function () { toast('댓글을 삭제했습니다'); load(); }).catch(function (err) { toast('오류: ' + err.message); el.disabled = false; });
+    return true;
+  }
+  return false;
 }
 
 /* ---------- 목록 동작 ---------- */
@@ -399,6 +485,7 @@ $('list').addEventListener('click', function (ev) {
   var e = S.entries.filter(function (x) { return x.id === card.dataset.id; })[0]; if (!e) return;
   if (ev.target.classList.contains('ph')) { view(ev.target.dataset.f, ev.target.src); return; }
   var a = ev.target.dataset.a;
+  if (cmtAction(a, ev.target, card, e)) return;
   if (a === 'copy') {
     var txt = shareText(e);
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('글 내용을 복사했습니다'); })

@@ -120,7 +120,7 @@
   .viewer img { max-width: 96vw; max-height: 92vh; border-radius: 12px; }
   .hide { display: none !important; }
   /* 뷰어 권한: 글쓰기 · 수정 · 삭제 버튼을 숨깁니다 */
-  body.viewer .fab, body.viewer [data-a="edit"], body.viewer [data-a="del"] { display: none !important; }
+  body.role-viewer .fab, body.role-viewer [data-a="edit"], body.role-viewer [data-a="del"] { display: none !important; }
 
   /* ---------- 랜딩(접속) 화면 ---------- */
   .gate {
@@ -301,7 +301,7 @@ function load(cb) {
   call('getInit').then(function (r) {
     S.cfg = r.config; S.entries = r.entries;
     S.user = r.user || null;
-    document.body.classList.toggle('viewer', !!(S.user && S.user.role !== 'editor'));
+    document.body.classList.toggle('role-viewer', !!(S.user && S.user.role !== 'editor'));
     $('dlClient').innerHTML = S.cfg.clients.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     $('dlWorker').innerHTML = S.cfg.workers.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     $('dlUnit').innerHTML = S.cfg.units.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
@@ -317,7 +317,7 @@ function load(cb) {
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock() {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
-  S.user = null; document.body.classList.remove('viewer');
+  S.user = null; document.body.classList.remove('role-viewer');
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   $('gateMsg').textContent = '접속코드를 다시 입력해 주세요';
 }

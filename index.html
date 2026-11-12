@@ -119,6 +119,58 @@
   .viewer.on { display: grid; }
   .viewer img { max-width: 96vw; max-height: 92vh; border-radius: 12px; }
   .hide { display: none !important; }
+
+  /* ---------- PC 위젯 (넓은 화면에서만 양옆에 표시) ---------- */
+  .side { display: none; }
+  @media (min-width: 1300px) {
+    .side {
+      --sw: min(300px, calc((100vw - 760px) / 2 - 48px));
+      display: flex; flex-direction: column; gap: 14px; position: fixed; top: 16px; z-index: 3;
+      width: var(--sw); max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: none;
+    }
+    .side::-webkit-scrollbar { display: none; }
+    .side-l { left: calc((100vw - 760px) / 2 - var(--sw) - 20px); }
+    .side-r { right: calc((100vw - 760px) / 2 - var(--sw) - 20px); }
+  }
+  .wcard { padding: 16px; }
+  .wcard h4 { margin: 0 0 10px; font-size: 13.5px; font-weight: 600; color: var(--sub); }
+  /* 캘린더 */
+  .cal-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .cal-h b { font-size: 16px; font-weight: 700; }
+  .cal-h button { border: 0; width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.65); color: var(--ink); font: inherit; font-size: 16px; cursor: pointer; }
+  .cal-g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-w { padding: 4px 0; text-align: center; font-size: 11.5px; color: var(--sub); }
+  .cal-w.sun { color: var(--red); } .cal-w.sat { color: var(--blue); }
+  .cal-d { min-height: 40px; padding: 3px 0; border: 0; border-radius: 10px; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; font-size: 13px; color: var(--ink); cursor: default; }
+  .cal-d span { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 999px; }
+  .cal-d.has { cursor: pointer; }
+  .cal-d.has:hover { background: rgba(255,255,255,.75); }
+  .cal-d.today span { background: var(--navy); color: #fff; }
+  .cal-d.sel { background: rgba(35,44,99,.12); }
+  .cal-d em { height: 6px; display: flex; gap: 3px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .d-시공일정 { background: #3f6fe0; } .d-보수일정 { background: #1f9d78; } .d-화성본드 { background: #f08a24; }
+  .cal-legend { margin-top: 10px; display: flex; justify-content: center; gap: 12px; font-size: 12px; color: var(--sub); }
+  .cal-legend span { display: flex; align-items: center; gap: 5px; }
+  /* 날씨 */
+  .wx-form { display: flex; gap: 6px; margin-bottom: 12px; }
+  .wx-form input { padding: 8px 10px; font-size: 14px; border-radius: 12px; }
+  .wx-form button { flex: none; }
+  .wx-now { display: flex; align-items: center; gap: 12px; }
+  .wx-ic { font-size: 40px; line-height: 1; }
+  .wx-t { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+  .wx-place { font-size: 15px; font-weight: 600; }
+  .wx-desc { font-size: 13px; color: var(--sub); }
+  .wx-meta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--sub); }
+  .wx-days { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .wx-day { padding: 6px 2px; border-radius: 12px; background: rgba(255,255,255,.5); text-align: center; font-size: 12px; }
+  .wx-day b { display: block; margin: 2px 0; font-size: 18px; font-weight: 400; }
+  .wx-msg { padding: 6px 0; font-size: 13px; color: var(--sub); }
+  .wx-msg a { color: var(--blue); }
+  /* 성경말씀 */
+  .bv { margin: 0; font-size: 15px; line-height: 1.75; word-break: keep-all; }
+  .bref { margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--navy); }
+  .blink { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--blue); text-decoration: none; }
   /* 뷰어 권한: 글쓰기 · 수정 · 삭제 버튼을 숨깁니다 */
   body.role-viewer .fab, body.role-viewer [data-a="edit"], body.role-viewer [data-a="del"], body.role-viewer [data-a="copy"] { display: none !important; }
   /* 댓글 */
@@ -222,9 +274,29 @@
   <div class="tools">
     <input id="q" type="search" placeholder="현장명, 업체명, 주소, 인원 검색">
     <button class="chip" id="upc">다가오는 일정</button>
+    <button class="chip on hide" id="dayChip"></button>
   </div>
   <main id="list"></main>
 </div>
+
+<aside class="side side-l">
+  <section class="wcard glass">
+    <div class="cal-h"><button id="calPrev" aria-label="이전 달">‹</button><b id="calTitle"></b><button id="calNext" aria-label="다음 달">›</button></div>
+    <div class="cal-g" id="calGrid"></div>
+    <div class="cal-legend"><span><i class="dot d-시공일정"></i>시공</span><span><i class="dot d-보수일정"></i>보수</span><span><i class="dot d-화성본드"></i>화성본드</span></div>
+  </section>
+</aside>
+<aside class="side side-r">
+  <section class="wcard glass">
+    <h4>날씨</h4>
+    <form class="wx-form" id="wxForm"><input id="wxCity" placeholder="도시명 (예: 서울)" autocomplete="off"><button class="mini" type="submit">보기</button></form>
+    <div id="wxBody"><div class="wx-msg">불러오는 중…</div></div>
+  </section>
+  <section class="wcard glass">
+    <h4>오늘의 말씀 · 매일성경묵상</h4>
+    <div id="bibleBody"><div class="wx-msg">로그인하면 오늘의 말씀이 표시됩니다.</div></div>
+  </section>
+</aside>
 
 <button class="fab" id="fab"><b>＋</b>글쓰기</button>
 
@@ -318,6 +390,7 @@ function load(cb) {
   call('getInit').then(function (r) {
     S.cfg = r.config; S.entries = r.entries;
     S.user = r.user || null;
+    loadBible();
     document.body.classList.toggle('role-viewer', !!(S.user && S.user.role !== 'editor'));
     $('dlClient').innerHTML = S.cfg.clients.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
     $('dlWorker').innerHTML = S.cfg.workers.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
@@ -335,12 +408,14 @@ function load(cb) {
 function lock() {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
   S.user = null; document.body.classList.remove('role-viewer');
+  S.day = null; S.bibleDate = '';
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   $('gateMsg').textContent = '접속코드를 다시 입력해 주세요';
 }
 
 function match(e) {
   if (S.tab !== '전체' && e.type !== S.tab) return false;
+  if (S.day && !(e.date <= S.day && (e.endDate && e.endDate >= e.date ? e.endDate : e.date) >= S.day)) return false;
   if (S.upc && (e.endDate || e.date) < today()) return false;
   if (S.q) {
     var hay = [e.site, e.client, e.manager, e.company, e.address, e.workers, e.chief, e.note, e.date, e.items.map(function (i) { return i.name; }).join(' ')].join(' ').toLowerCase();
@@ -350,6 +425,7 @@ function match(e) {
 }
 function itemText(i) { return i.name + (i.qty ? ' ' + i.qty + (i.unit || '') : ''); }
 function render() {
+  drawCal();
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
   $('sub').textContent = S.user ? S.user.name + ' · ' + (S.user.role === 'editor' ? '편집자' : '뷰어') : '';
@@ -465,6 +541,117 @@ function cmtAction(a, el, card, e) {
   }
   return false;
 }
+
+/* ---------- PC 위젯 ---------- */
+var sideMQ = window.matchMedia('(min-width: 1300px)');
+function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+
+// 캘린더: 일정이 있는 날에 종류별 색 점을 찍고, 누르면 그날 글만 보여 줍니다.
+var CAL = { y: null, m: null };
+function dayMap() {
+  var map = {};
+  S.entries.forEach(function (e) {
+    if (!/^\d{4}-\d{2}-\d{2}/.test(e.date)) return;
+    var d = new Date(e.date.slice(0, 10) + 'T00:00:00');
+    var end = /^\d{4}-\d{2}-\d{2}/.test(e.endDate || '') ? new Date(e.endDate.slice(0, 10) + 'T00:00:00') : d;
+    if (end < d) end = d;
+    for (var n = 0; d <= end && n < 62; n++) { var k = ymd(d); (map[k] = map[k] || {})[e.type] = 1; d.setDate(d.getDate() + 1); }
+  });
+  return map;
+}
+function drawCal() {
+  var chip = $('dayChip');
+  chip.classList.toggle('hide', !S.day);
+  if (S.day) chip.textContent = nice(S.day) + ' 일정만 보기 ✕';
+  if (!$('calGrid')) return;
+  if (CAL.y === null) { var t = new Date(); CAL.y = t.getFullYear(); CAL.m = t.getMonth(); }
+  $('calTitle').textContent = CAL.y + '년 ' + (CAL.m + 1) + '월';
+  var start = new Date(CAL.y, CAL.m, 1).getDay(), days = new Date(CAL.y, CAL.m + 1, 0).getDate(), map = dayMap(), td = today();
+  var h = WD.map(function (w, i) { return '<div class="cal-w' + (i === 0 ? ' sun' : '') + (i === 6 ? ' sat' : '') + '">' + w + '</div>'; }).join('');
+  for (var i = 0; i < start; i++) h += '<div></div>';
+  for (var dd = 1; dd <= days; dd++) {
+    var k = CAL.y + '-' + ('0' + (CAL.m + 1)).slice(-2) + '-' + ('0' + dd).slice(-2), ty = map[k] || {};
+    var dots = ['시공일정', '보수일정', '화성본드'].filter(function (x) { return ty[x]; }).map(function (x) { return '<i class="dot d-' + x + '"></i>'; }).join('');
+    h += '<button class="cal-d' + (k === td ? ' today' : '') + (S.day === k ? ' sel' : '') + (dots ? ' has' : '') + '" data-d="' + k + '"' + (dots ? '' : ' tabindex="-1"') + '><span>' + dd + '</span><em>' + dots + '</em></button>';
+  }
+  $('calGrid').innerHTML = h;
+}
+$('calGrid').onclick = function (ev) {
+  var b = ev.target.closest('.cal-d.has'); if (!b) return;
+  S.day = S.day === b.dataset.d ? null : b.dataset.d;
+  if (S.day) { S.tab = '전체'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.t === '전체'); }); }
+  render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+$('calPrev').onclick = function () { if (--CAL.m < 0) { CAL.m = 11; CAL.y--; } drawCal(); };
+$('calNext').onclick = function () { if (++CAL.m > 11) { CAL.m = 0; CAL.y++; } drawCal(); };
+$('dayChip').onclick = function () { S.day = null; render(); };
+
+// 날씨: Open-Meteo 무료 날씨 정보. 기본 위치는 양주이고, 입력한 도시는 이 기기에 기억합니다.
+var WXC = { 0: ['맑음', '☀️'], 1: ['대체로 맑음', '🌤️'], 2: ['구름 조금', '⛅'], 3: ['흐림', '☁️'], 45: ['안개', '🌫️'], 48: ['안개', '🌫️'],
+  51: ['약한 이슬비', '🌦️'], 53: ['이슬비', '🌦️'], 55: ['강한 이슬비', '🌧️'], 56: ['어는 이슬비', '🌧️'], 57: ['어는 이슬비', '🌧️'],
+  61: ['약한 비', '🌦️'], 63: ['비', '🌧️'], 65: ['강한 비', '🌧️'], 66: ['어는 비', '🌧️'], 67: ['어는 비', '🌧️'],
+  71: ['약한 눈', '🌨️'], 73: ['눈', '🌨️'], 75: ['많은 눈', '❄️'], 77: ['싸락눈', '🌨️'],
+  80: ['소나기', '🌦️'], 81: ['소나기', '🌧️'], 82: ['강한 소나기', '⛈️'], 85: ['눈 소나기', '🌨️'], 86: ['많은 눈 소나기', '❄️'],
+  95: ['뇌우', '⛈️'], 96: ['뇌우·우박', '⛈️'], 99: ['뇌우·우박', '⛈️'] };
+function wxc(c) { return WXC[c] || ['-', '🌡️']; }
+function loadWx(city) {
+  city = String(city || store('hia_city') || '양주').trim();
+  $('wxBody').innerHTML = '<div class="wx-msg">불러오는 중…</div>';
+  fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=ko&format=json&name=' + encodeURIComponent(city))
+    .then(function (r) { return r.json(); })
+    .then(function (g) {
+      var p = g.results && g.results[0];
+      if (!p) throw new Error('NF');
+      return fetch('https://api.open-meteo.com/v1/forecast?latitude=' + p.latitude + '&longitude=' + p.longitude +
+        '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m' +
+        '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul&forecast_days=4')
+        .then(function (r) { return r.json(); })
+        .then(function (w) { store('hia_city', city); $('wxCity').value = ''; drawWx(p, w); });
+    })
+    .catch(function (e) {
+      $('wxBody').innerHTML = '<div class="wx-msg">' + (e.message === 'NF' ? '\'' + esc(city) + '\' 지역을 찾지 못했습니다. 도시명을 다시 입력해 주세요.' : '날씨를 불러오지 못했습니다.') + '</div>';
+    });
+}
+function drawWx(p, w) {
+  var c = w.current, d = w.daily, now = wxc(c.weather_code);
+  var days = [1, 2, 3].map(function (i) {
+    var x = new Date(d.time[i] + 'T00:00:00'), cc = wxc(d.weather_code[i]);
+    return '<div class="wx-day">' + (i === 1 ? '내일' : WD[x.getDay()] + '요일') + '<b>' + cc[1] + '</b>' +
+      Math.round(d.temperature_2m_min[i]) + '° / ' + Math.round(d.temperature_2m_max[i]) + '°</div>';
+  }).join('');
+  $('wxBody').innerHTML =
+    '<div class="wx-now"><div class="wx-ic">' + now[1] + '</div><div><div class="wx-t">' + Math.round(c.temperature_2m) + '°</div>' +
+    '<div class="wx-place">' + esc(p.name) + (p.admin1 && p.admin1 !== p.name ? ' <span class="wx-desc">' + esc(p.admin1) + '</span>' : '') + '</div>' +
+    '<div class="wx-desc">' + now[0] + ' · 최저 ' + Math.round(d.temperature_2m_min[0]) + '° 최고 ' + Math.round(d.temperature_2m_max[0]) + '°</div></div></div>' +
+    '<div class="wx-meta"><span>체감 ' + Math.round(c.apparent_temperature) + '°</span><span>습도 ' + c.relative_humidity_2m + '%</span>' +
+    '<span>바람 ' + (c.wind_speed_10m / 3.6).toFixed(1) + 'm/s</span>' +
+    (d.precipitation_probability_max[0] != null ? '<span>강수확률 ' + d.precipitation_probability_max[0] + '%</span>' : '') + '</div>' +
+    '<div class="wx-days">' + days + '</div>';
+}
+$('wxForm').onsubmit = function (ev) { ev.preventDefault(); var v = $('wxCity').value.trim(); if (v) loadWx(v); };
+
+// 성경말씀: 대한성서공회 '매일성경묵상'을 하루 한 번 받아옵니다.
+function loadBible() {
+  if (!S.code || !sideMQ.matches || S.bibleDate === today()) return;
+  S.bibleDate = today();
+  call('getBible').then(function (b) {
+    $('bibleBody').innerHTML = '<p class="bv">' + esc(b.text) + '</p><div class="bref">' + esc(b.ref) + ' · 개역개정</div>' +
+      '<a class="blink" href="' + esc(b.url) + '" target="_blank" rel="noopener">묵상 내용 보기 →</a>';
+  }).catch(function () {
+    S.bibleDate = '';
+    $('bibleBody').innerHTML = '<div class="wx-msg">말씀을 불러오지 못했습니다. <a href="https://bible.bskorea.or.kr/" target="_blank" rel="noopener">대한성서공회에서 보기</a></div>';
+  });
+}
+
+var wxTimer = null;
+function sideOn() {
+  if (!sideMQ.matches) return;
+  if (!wxTimer) { loadWx(); wxTimer = setInterval(function () { loadWx(); }, 30 * 60 * 1000); }
+  loadBible();
+}
+if (sideMQ.addEventListener) sideMQ.addEventListener('change', sideOn); else sideMQ.addListener(sideOn);
+sideOn();
+setInterval(function () { if (S.code) { loadBible(); drawCal(); } }, 10 * 60 * 1000); // 날짜가 바뀌면 새 말씀과 오늘 표시
 
 /* ---------- 목록 동작 ---------- */
 function shareText(e) {

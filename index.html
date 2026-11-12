@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>헤븐인 업무일정</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#eef1fb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="헤븐인">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  html, body { margin: 0; height: 100%; background: #eef1fb; overflow: hidden; }
+  /* 웹앱 본체를 화면 가득 띄웁니다 */
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; height: 100dvh; border: 0; }
+  .wait { position: fixed; inset: 0; display: grid; place-items: center; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; color: #5a6282; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="wait" id="wait">불러오는 중…</div>
+<iframe id="app" title="헤븐인 업무일정"
+  src="https://script.google.com/macros/s/AKfycbyi7qyGBloWlyzilhxT63JSwaMWUuLksYX4km49evavfQyUwipPIyp7XZw1uhlkQKvF1A/exec"
+  allow="clipboard-write; camera"></iframe>
+<script>
+  document.getElementById('app').addEventListener('load', function () {
+    document.getElementById('wait').style.display = 'none';
+  });
+</script>
+</body>
+</html>

@@ -100,6 +100,8 @@
   .seg { display: flex; gap: 6px; margin-bottom: 14px; }
   .seg .chip { flex: 1; text-align: center; font-size: 15px; padding: 11px 6px; }
   label.f { display: block; font-size: 13.5px; color: var(--sub); margin: 12px 0 5px; }
+  label.f .hint { font-size: 12px; opacity: .75; }
+  .addr2 { color: var(--sub); }
   .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .row2 > * { min-width: 0; }
   /* 모바일(아이폰) 날짜 칸이 옆 칸과 겹치지 않게 */
@@ -472,7 +474,8 @@
     </div>
     <div class="only-total"><label class="f">업체명</label><input id="fCompany"></div>
     <label class="f">현장명</label><input id="fSite">
-    <div class="only-total"><label class="f">주소</label><input id="fAddr"></div>
+    <div class="only-total"><label class="f">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
+    <div class="only-total"><label class="f">세부주소 <span class="hint">· 층수, 게이트 등 (시트에는 안 들어감)</span></label><input id="fAddr2" placeholder="예: 32층 / 2번 게이트 / 1층에 스타벅스"></div>
 
     <label class="f" id="lblItems">내용 (내역 · 단위 · 수량 · 단가)</label>
     <div id="items"></div>
@@ -574,7 +577,7 @@ function match(e) {
   if (S.day && !(e.date <= S.day && (e.endDate && e.endDate >= e.date ? e.endDate : e.date) >= S.day)) return false;
   if (S.upc && (e.endDate || e.date) < today()) return false;
   if (S.q) {
-    var hay = [e.site, e.client, e.manager, e.company, e.address, e.workers, e.chief, e.note, e.date, e.items.map(function (i) { return i.name; }).join(' ')].join(' ').toLowerCase();
+    var hay = [e.site, e.client, e.manager, e.company, e.address, e.address2, e.workers, e.chief, e.note, e.date, e.items.map(function (i) { return i.name; }).join(' ')].join(' ').toLowerCase();
     if (hay.indexOf(S.q.toLowerCase()) < 0) return false;
   }
   return true;
@@ -596,7 +599,8 @@ function render() {
     if (e.kind === 'total') {
       add('담당자', [e.client, e.manager].filter(String).join(' '));
       add('업체명', e.company);
-      add('주소', e.address, e.address ? '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>' : '');
+      if (e.address || e.address2) add('주소', 1, (e.address ? '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>' : '') +
+        (e.address2 ? (e.address ? '<br>' : '') + '<span class="addr2">' + rich(e.address2) + '</span>' : ''));
       add('내용', e.items.map(itemText).join('\n'));
       add('소장', e.chief); add('인원', e.workers, rich(e.workers).replace(/ \/ /g, '<br>')); add('기타', e.note);
     } else {
@@ -1045,7 +1049,7 @@ setInterval(function () { if (S.code) { loadBible(); drawCal(); } }, 10 * 60 * 1
 function shareText(e) {
   var L = ['#' + e.type + ' ' + nice(e.date) + (e.endDate && e.endDate !== e.date ? ' ~ ' + nice(e.endDate) : '')];
   if (e.kind === 'total') {
-    L.push('담당자 : ' + [e.client, e.manager].filter(String).join(' '), '업체명 : ' + e.company, '현장명 : ' + e.site, '주소 : ' + e.address,
+    L.push('담당자 : ' + [e.client, e.manager].filter(String).join(' '), '업체명 : ' + e.company, '현장명 : ' + e.site, '주소 : ' + [e.address, e.address2].filter(String).join(' / '),
       '내용 : ' + e.items.map(itemText).join(', '), '소장 : ' + e.chief, '인원 : ' + e.workers);
     if (e.note) L.push('기타 :\n' + e.note);
   } else {
@@ -1361,7 +1365,7 @@ function openForm(e) {
   $('fDate').value = e ? e.date : today(); $('fEnd').value = e ? (e.endDate || '') : '';
   $('fClient').value = e ? (e.client || '') : ''; $('fManager').value = e ? (e.manager || '') : '';
   $('fCompany').value = e ? (e.company || '') : ''; $('fSite').value = e ? (e.site || '') : '';
-  $('fAddr').value = e ? (e.address || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
+  $('fAddr').value = e ? (e.address || '') : ''; $('fAddr2').value = e ? (e.address2 || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
   $('fNote').value = e ? (e.note || '') : ''; $('pasteTxt').value = '';
   $('fAuthor').value = e ? (e.author || '') : (S.user ? S.user.name : store('hia_author'));
   $('items').innerHTML = ''; (e && e.items.length ? e.items : [{}]).forEach(function (i) { F.type = e ? e.type : F.type; addItem(i); });
@@ -1411,7 +1415,7 @@ $('btnSave').onclick = function () {
   var d = {
     id: F.id, type: F.type, date: $('fDate').value, endDate: bond ? '' : end,
     client: $('fClient').value, manager: $('fManager').value, company: $('fCompany').value,
-    site: $('fSite').value, address: $('fAddr').value, items: readItems(),
+    site: $('fSite').value, address: $('fAddr').value, address2: bond ? '' : $('fAddr2').value, items: readItems(),
     chief: $('fChief').value, workers: bond ? '' : workersText(), note: $('fNote').value,
     author: $('fAuthor').value.trim(), keep: F.keep.map(function (p) { return p.f; }), photos: F.news
   };

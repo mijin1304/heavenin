@@ -114,11 +114,10 @@
   .sug.on { display: block; }
   .sug button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 11px 12px; border-radius: 11px; font: inherit; font-size: 15px; color: var(--ink); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sug button:hover, .sug button.act { background: rgba(63,111,224,.1); }
-  .item { display: grid; grid-template-columns: 1fr 74px 78px 96px 38px; gap: 6px; margin-bottom: 6px; }
-  .item.nob { grid-template-columns: 1fr 84px 84px 38px; }
+  .item { display: grid; grid-template-columns: 1fr 84px 84px 38px; gap: 6px; margin-bottom: 6px; }
   .item input, .item select { padding: 11px 9px; min-width: 0; }
   .item button, .x { border: 0; background: rgba(210,72,79,.12); color: var(--red); border-radius: 12px; font-size: 18px; cursor: pointer; }
-  @media (max-width: 520px) { .item { grid-template-columns: 1fr 1fr 1fr 38px; } .item input:first-child, .item select:first-child { grid-column: 1 / -1; } .item.nob { grid-template-columns: 1fr 1fr 38px; } }
+  @media (max-width: 520px) { .item { grid-template-columns: 1fr 1fr 38px; } .item input:first-child, .item select:first-child { grid-column: 1 / -1; } }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   /* 인원: 여러 날 공사일 때 날짜별 입력 */
   .wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
@@ -239,12 +238,7 @@
   .w[data-w="fx"][data-size="1x1"] .fx-cv, .w[data-w="fx"][data-size="1x1"] .fx-src { display: none; }
   .w[data-w="fx"][data-size="1x1"] .fx-v { font-size: 21px; }
   .w[data-w="fx"][data-size="1x1"] .fx-c { font-size: 11.5px; }
-  .wcard { padding: 16px; }
-  .wcard h4 { margin: 0 0 10px; font-size: 13.5px; font-weight: 600; color: var(--sub); }
   /* 캘린더 */
-  .cal-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-  .cal-h b { font-size: 16px; font-weight: 700; }
-  .cal-h button { border: 0; width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.65); color: var(--ink); font: inherit; font-size: 16px; cursor: pointer; }
   .cal-g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
   .cal-w { padding: 4px 0; text-align: center; font-size: 11.5px; color: var(--sub); }
   .cal-w.sun { color: var(--red); } .cal-w.sat { color: var(--blue); }
@@ -514,7 +508,7 @@ function store(k, v) { try { if (v === undefined) return localStorage.getItem(k)
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function rich(s) { return esc(s).replace(/(01[016789][- ]?\d{3,4}[- ]?\d{4})/g, function (m) { return '<a href="tel:' + m.replace(/[^\d]/g, '') + '" target="_top">' + m + '</a>'; }); }
 function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('on'); }, 2600); }
-function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function today() { return ymd(new Date()); }
 function nice(d) { if (!/^\d{4}-\d{2}-\d{2}/.test(d)) return d; var x = new Date(d.slice(0, 10) + 'T00:00:00'); return x.getFullYear() + '년 ' + (x.getMonth() + 1) + '월 ' + x.getDate() + '일 (' + WD[x.getDay()] + ')'; }
 var API = 'https://script.google.com/macros/s/AKfycbyi7qyGBloWlyzilhxT63JSwaMWUuLksYX4km49evavfQyUwipPIyp7XZw1uhlkQKvF1A/exec';
 function call(fn) {
@@ -1095,7 +1089,7 @@ function setType(t) {
 function addItem(it) {
   it = it || {};
   var bond = F.type === '화성본드';
-  var div = document.createElement('div'); div.className = 'item nob'; // 단가는 웹앱에서 받지 않고 시트에서만 입력합니다
+  var div = document.createElement('div'); div.className = 'item'; // 단가는 웹앱에서 받지 않고 시트에서만 입력합니다
   // 화성본드는 설정 탭 D열의 품목/규격 중에서 고릅니다.
   var bondList = bond && S.cfg.bondItems && S.cfg.bondItems.length ? S.cfg.bondItems : null;
   div.innerHTML = (bondList
@@ -1124,7 +1118,6 @@ function drawWorkers(selected) {
 // 인원 날짜별 입력: 종료일이 있으면 날짜마다 다른 인원을 고를 수 있습니다.
 // 저장 형식: "11/12 정천기, 황석기 / 11/13 이혁" (밴드에서 옮긴 "15일 정천기 황석기" 형식도 읽습니다)
 F.perDay = false; F.days = {}; F.extra = [];
-function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function dayList() {
   var s = $('fDate').value, e = $('fEnd').value, out = [];
   if (F.type === '화성본드' || !s || !e || e <= s) return out;

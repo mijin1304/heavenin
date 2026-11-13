@@ -1130,7 +1130,7 @@ function drawWorkers(selected) {
 }
 // 인원 날짜별 입력: 종료일이 있으면 날짜마다 다른 인원을 고를 수 있습니다.
 // 저장 형식: "11/12 정천기, 황석기 / 11/13 이혁" (밴드에서 옮긴 "15일 정천기 황석기" 형식도 읽습니다)
-F.perDay = false; F.days = {};
+F.perDay = false; F.days = {}; F.extra = [];
 function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function dayList() {
   var s = $('fDate').value, e = $('fEnd').value, out = [];
@@ -1138,6 +1138,12 @@ function dayList() {
   var d = new Date(s + 'T00:00:00'), end = new Date(e + 'T00:00:00');
   while (d <= end && out.length < 31) { out.push(ymd(d)); d.setDate(d.getDate() + 1); }
   return out;
+}
+// 밴드 글처럼 종료일 밖의 날짜에도 인원이 적혀 있으면 그 날짜도 함께 보여 줍니다(내용이 사라지지 않게).
+function allDays() {
+  var a = dayList();
+  (F.extra || []).forEach(function (d) { if (a.indexOf(d) < 0) a.push(d); });
+  return a.sort();
 }
 function md(ds) { var x = new Date(ds + 'T00:00:00'); return (x.getMonth() + 1) + '/' + x.getDate(); }
 function splitNames(s) {
@@ -1153,7 +1159,7 @@ function dayNames(st) {
 }
 // 저장된 인원 글을 읽어 화면에 채웁니다. 날짜가 붙어 있으면 날짜별 입력으로 엽니다.
 function loadWorkers(text, start) {
-  F.days = {}; F.perDay = false;
+  F.days = {}; F.perDay = false; F.extra = [];
   var segs = String(text || '').split(/\s*\/\s*(?=\d{1,2}(?:\/\d{1,2}|일))|\n+/).map(function (x) { return x.trim(); }).filter(String);
   var dated = segs.length > 1 && start && segs.every(function (x) { return /^\d{1,2}(\/\d{1,2}|일)/.test(x); });
   if (dated) {
@@ -1164,6 +1170,8 @@ function loadWorkers(text, start) {
       else { d = new Date(s.getFullYear(), s.getMonth(), +n[1]); if (d < s) d.setMonth(d.getMonth() + 1); }
       F.days[ymd(d)] = splitNames(m ? m[3] : n[2]);
     });
+    var rng = dayList();
+    F.extra = Object.keys(F.days).filter(function (d) { return rng.indexOf(d) < 0; });
     F.perDay = true;
     drawWorkers([]); $('fWorkerEtc').value = '';
   } else {
@@ -1173,7 +1181,7 @@ function loadWorkers(text, start) {
   syncPerDay();
 }
 function syncPerDay() {
-  var days = dayList();
+  var days = allDays();
   $('btnPerDay').classList.toggle('hide', days.length < 2);
   if (days.length < 2) F.perDay = false;
   $('btnPerDay').textContent = F.perDay ? '모든 날 같게' : '날짜별로 다르게';
@@ -1193,10 +1201,10 @@ $('btnPerDay').onclick = function () {
   if (!F.perDay) {
     // 처음 켤 때는 지금 고른 인원을 모든 날에 똑같이 넣어 둡니다.
     var common = { picked: Object.assign({}, F.picked), etc: $('fWorkerEtc').value };
-    dayList().forEach(function (d) { var st = F.days[d]; if (!st || !dayNames(st).length) F.days[d] = { picked: Object.assign({}, common.picked), etc: common.etc }; });
+    allDays().forEach(function (d) { var st = F.days[d]; if (!st || !dayNames(st).length) F.days[d] = { picked: Object.assign({}, common.picked), etc: common.etc }; });
   } else {
     // 끌 때는 첫날 인원을 공통 인원으로 씁니다.
-    var first = F.days[dayList()[0]] || { picked: {}, etc: '' };
+    var first = F.days[allDays()[0]] || { picked: {}, etc: '' };
     drawWorkers(Object.keys(first.picked).filter(function (w) { return first.picked[w]; })); $('fWorkerEtc').value = first.etc;
   }
   F.perDay = !F.perDay; syncPerDay();
@@ -1220,7 +1228,7 @@ $('fDate').addEventListener('change', syncPerDay);
 $('fEnd').addEventListener('change', syncPerDay);
 function workersText() {
   if (F.perDay) {
-    return dayList().map(function (d) { var ws = dayNames(F.days[d] || { picked: {}, etc: '' }); return ws.length ? md(d) + ' ' + ws.join(', ') : ''; })
+    return allDays().map(function (d) { var ws = dayNames(F.days[d] || { picked: {}, etc: '' }); return ws.length ? md(d) + ' ' + ws.join(', ') : ''; })
       .filter(String).join(' / ');
   }
   return dayNames({ picked: F.picked, etc: $('fWorkerEtc').value }).join(', ');

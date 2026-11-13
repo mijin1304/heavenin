@@ -477,7 +477,7 @@
     <div class="only-total"><label class="f">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
     <div class="only-total"><label class="f">세부주소 <span class="hint">· 층수, 게이트 등 (시트에는 안 들어감)</span></label><input id="fAddr2" placeholder="예: 32층 / 2번 게이트 / 1층에 스타벅스"></div>
 
-    <label class="f" id="lblItems">내용 (내역 · 단위 · 수량 · 단가)</label>
+    <label class="f" id="lblItems">내용 (내역 · 단위 · 수량)</label>
     <div id="items"></div>
     <button class="mini" id="btnAddItem">＋ 내역 추가</button>
 
@@ -1095,7 +1095,7 @@ function setType(t) {
   document.querySelectorAll('#seg .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.t === t); });
   var bond = t === '화성본드';
   document.querySelectorAll('.only-total').forEach(function (el) { el.classList.toggle('hide', bond); });
-  $('lblItems').textContent = bond ? '품목 (품목/규격 · 단위 · 수량)' : '내용 (내역 · 단위 · 수량 · 단가)';
+  $('lblItems').textContent = bond ? '품목 (품목/규격 · 단위 · 수량)' : '내용 (내역 · 단위 · 수량)';
   $('lblNote').textContent = bond ? '비고' : '기타';
   $('pasteBox').classList.toggle('hide', bond || !!F.id);
   if (F.days) syncPerDay();
@@ -1104,7 +1104,7 @@ function setType(t) {
 function addItem(it) {
   it = it || {};
   var bond = F.type === '화성본드';
-  var div = document.createElement('div'); div.className = 'item' + (bond ? ' nob' : '');
+  var div = document.createElement('div'); div.className = 'item nob'; // 단가는 웹앱에서 받지 않고 시트에서만 입력합니다
   // 화성본드는 설정 탭 D열의 품목/규격 중에서 고릅니다.
   var bondList = bond && S.cfg.bondItems && S.cfg.bondItems.length ? S.cfg.bondItems : null;
   div.innerHTML = (bondList
@@ -1112,20 +1112,18 @@ function addItem(it) {
     : '<input class="i-name" placeholder="' + (bond ? '예: 250본드' : '예: LVT 시공') + '">') +
     '<input class="i-unit" data-sug="units" autocomplete="off" placeholder="단위">' +
     '<input class="i-qty" inputmode="decimal" placeholder="수량">' +
-    (bond ? '' : '<input class="i-price" inputmode="numeric" placeholder="단가">') + '<button title="내역 삭제">×</button>';
+    '<button title="내역 삭제">×</button>';
   var nm = div.querySelector('.i-name');
   if (nm.tagName === 'SELECT' && it.name && !Array.prototype.some.call(nm.options, function (o) { return o.value === it.name; })) {
     var op = document.createElement('option'); op.value = op.textContent = it.name; nm.appendChild(op); // 목록에 없는 예전 값도 그대로 보여 줍니다
   }
   nm.value = it.name || ''; div.querySelector('.i-unit').value = it.unit || ''; div.querySelector('.i-qty').value = it.qty || '';
-  if (!bond) div.querySelector('.i-price').value = it.price || '';
   div.querySelector('button').onclick = function () { if (document.querySelectorAll('#items .item').length > 1) div.remove(); };
   $('items').appendChild(div);
 }
 function readItems() {
   return Array.prototype.map.call(document.querySelectorAll('#items .item'), function (d) {
-    var p = d.querySelector('.i-price');
-    return { name: d.querySelector('.i-name').value.trim(), unit: d.querySelector('.i-unit').value.trim(), qty: d.querySelector('.i-qty').value.trim(), price: p ? p.value.trim() : '' };
+    return { name: d.querySelector('.i-name').value.trim(), unit: d.querySelector('.i-unit').value.trim(), qty: d.querySelector('.i-qty').value.trim() };
   }).filter(function (i) { return i.name || i.qty; });
 }
 function drawWorkers(selected) {

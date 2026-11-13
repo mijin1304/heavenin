@@ -118,6 +118,13 @@
   .item button, .x { border: 0; background: rgba(210,72,79,.12); color: var(--red); border-radius: 12px; font-size: 18px; cursor: pointer; }
   @media (max-width: 520px) { .item { grid-template-columns: 1fr 1fr 1fr 38px; } .item input:first-child, .item select:first-child { grid-column: 1 / -1; } .item.nob { grid-template-columns: 1fr 1fr 38px; } }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* 인원: 여러 날 공사일 때 날짜별 입력 */
+  .wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+  .wk-head .mini { margin-bottom: 5px; }
+  .wk-day { margin-top: 8px; padding: 10px 12px 12px; border-radius: 16px; background: rgba(255,255,255,.45); border: 1px solid var(--line); }
+  .wk-dh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+  .wk-dh b { color: var(--navy); }
+  .wk-day .wk-etc { margin-top: 8px; }
   .pick { position: relative; width: 92px; height: 92px; flex: none; }
   .pick img { width: 100%; height: 100%; border-radius: 14px; object-fit: cover; }
   .pick .x { position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; border-radius: 50%; background: var(--red); color: #fff; font-size: 15px; }
@@ -473,9 +480,12 @@
 
     <div class="only-total">
       <label class="f">소장 (이름 · 연락처)</label><input id="fChief">
-      <label class="f">인원</label>
-      <div class="chips" id="workers"></div>
-      <input id="fWorkerEtc" placeholder="목록에 없는 인원 (쉼표로 구분)" style="margin-top:8px">
+      <div class="wk-head"><label class="f">인원</label><button class="mini hide" type="button" id="btnPerDay">날짜별로 다르게</button></div>
+      <div id="wkAll">
+        <div class="chips" id="workers"></div>
+        <input id="fWorkerEtc" placeholder="목록에 없는 인원 (쉼표로 구분)" style="margin-top:8px">
+      </div>
+      <div id="wkDays" class="hide"></div>
     </div>
     <label class="f" id="lblNote">기타</label><textarea id="fNote" placeholder="1. 도착 시간&#10;2. 주차 안내"></textarea>
 
@@ -588,7 +598,7 @@ function render() {
       add('업체명', e.company);
       add('주소', e.address, e.address ? '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>' : '');
       add('내용', e.items.map(itemText).join('\n'));
-      add('소장', e.chief); add('인원', e.workers); add('기타', e.note);
+      add('소장', e.chief); add('인원', e.workers, rich(e.workers).replace(/ \/ /g, '<br>')); add('기타', e.note);
     } else {
       add('내용', e.items.map(itemText).join('\n')); add('비고', e.note);
     }
@@ -1084,6 +1094,7 @@ function setType(t) {
   $('lblItems').textContent = bond ? '품목 (품목/규격 · 단위 · 수량)' : '내용 (내역 · 단위 · 수량 · 단가)';
   $('lblNote').textContent = bond ? '비고' : '기타';
   $('pasteBox').classList.toggle('hide', bond || !!F.id);
+  if (F.days) syncPerDay();
   var cur = readItems(); $('items').innerHTML = ''; (cur.length ? cur : [{}]).forEach(addItem);
 }
 function addItem(it) {
@@ -1116,6 +1127,103 @@ function readItems() {
 function drawWorkers(selected) {
   F.picked = {}; (selected || []).forEach(function (w) { F.picked[w] = true; });
   $('workers').innerHTML = S.cfg.workers.map(function (w) { return '<button class="chip' + (F.picked[w] ? ' on' : '') + '" data-w="' + esc(w) + '">' + esc(w) + '</button>'; }).join('');
+}
+// 인원 날짜별 입력: 종료일이 있으면 날짜마다 다른 인원을 고를 수 있습니다.
+// 저장 형식: "11/12 정천기, 황석기 / 11/13 이혁" (밴드에서 옮긴 "15일 정천기 황석기" 형식도 읽습니다)
+F.perDay = false; F.days = {};
+function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function dayList() {
+  var s = $('fDate').value, e = $('fEnd').value, out = [];
+  if (F.type === '화성본드' || !s || !e || e <= s) return out;
+  var d = new Date(s + 'T00:00:00'), end = new Date(e + 'T00:00:00');
+  while (d <= end && out.length < 31) { out.push(ymd(d)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+function md(ds) { var x = new Date(ds + 'T00:00:00'); return (x.getMonth() + 1) + '/' + x.getDate(); }
+function splitNames(s) {
+  var known = [], etc = [];
+  String(s || '').split(/[,\s]+/).filter(String).forEach(function (w) { (S.cfg.workers.indexOf(w) >= 0 ? known : etc).push(w); });
+  var picked = {}; known.forEach(function (w) { picked[w] = true; });
+  return { picked: picked, etc: etc.join(', ') };
+}
+function dayNames(st) {
+  var ws = S.cfg.workers.filter(function (w) { return st.picked[w]; });
+  String(st.etc || '').split(',').forEach(function (w) { w = w.trim(); if (w) ws.push(w); });
+  return ws;
+}
+// 저장된 인원 글을 읽어 화면에 채웁니다. 날짜가 붙어 있으면 날짜별 입력으로 엽니다.
+function loadWorkers(text, start) {
+  F.days = {}; F.perDay = false;
+  var segs = String(text || '').split(/\s*\/\s*(?=\d{1,2}(?:\/\d{1,2}|일))|\n+/).map(function (x) { return x.trim(); }).filter(String);
+  var dated = segs.length > 1 && start && segs.every(function (x) { return /^\d{1,2}(\/\d{1,2}|일)/.test(x); });
+  if (dated) {
+    var s = new Date(start + 'T00:00:00');
+    segs.forEach(function (x) {
+      var m = x.match(/^(\d{1,2})\/(\d{1,2})\s*(.*)$/), n = x.match(/^(\d{1,2})일\s*(.*)$/), d;
+      if (m) { d = new Date(s.getFullYear(), +m[1] - 1, +m[2]); if (d < s) d.setFullYear(d.getFullYear() + 1); }
+      else { d = new Date(s.getFullYear(), s.getMonth(), +n[1]); if (d < s) d.setMonth(d.getMonth() + 1); }
+      F.days[ymd(d)] = splitNames(m ? m[3] : n[2]);
+    });
+    F.perDay = true;
+    drawWorkers([]); $('fWorkerEtc').value = '';
+  } else {
+    var a = splitNames(String(text || '').replace(/\s*\/\s*/g, ', '));
+    drawWorkers(Object.keys(a.picked)); $('fWorkerEtc').value = a.etc;
+  }
+  syncPerDay();
+}
+function syncPerDay() {
+  var days = dayList();
+  $('btnPerDay').classList.toggle('hide', days.length < 2);
+  if (days.length < 2) F.perDay = false;
+  $('btnPerDay').textContent = F.perDay ? '모든 날 같게' : '날짜별로 다르게';
+  $('wkAll').classList.toggle('hide', F.perDay);
+  $('wkDays').classList.toggle('hide', !F.perDay);
+  if (!F.perDay) return;
+  $('wkDays').innerHTML = days.map(function (d, i) {
+    var st = F.days[d] || (F.days[d] = { picked: {}, etc: '' });
+    var x = new Date(d + 'T00:00:00');
+    return '<div class="wk-day" data-d="' + d + '"><div class="wk-dh"><b>' + md(d) + ' (' + WD[x.getDay()] + ')</b>' +
+      (i ? '<button class="mini" type="button" data-copy="1">전날과 같게</button>' : '') + '</div><div class="chips">' +
+      S.cfg.workers.map(function (w) { return '<button class="chip' + (st.picked[w] ? ' on' : '') + '" type="button" data-w="' + esc(w) + '">' + esc(w) + '</button>'; }).join('') +
+      '</div><input class="wk-etc" placeholder="목록에 없는 인원 (쉼표로 구분)" value="' + esc(st.etc) + '"></div>';
+  }).join('');
+}
+$('btnPerDay').onclick = function () {
+  if (!F.perDay) {
+    // 처음 켤 때는 지금 고른 인원을 모든 날에 똑같이 넣어 둡니다.
+    var common = { picked: Object.assign({}, F.picked), etc: $('fWorkerEtc').value };
+    dayList().forEach(function (d) { var st = F.days[d]; if (!st || !dayNames(st).length) F.days[d] = { picked: Object.assign({}, common.picked), etc: common.etc }; });
+  } else {
+    // 끌 때는 첫날 인원을 공통 인원으로 씁니다.
+    var first = F.days[dayList()[0]] || { picked: {}, etc: '' };
+    drawWorkers(Object.keys(first.picked).filter(function (w) { return first.picked[w]; })); $('fWorkerEtc').value = first.etc;
+  }
+  F.perDay = !F.perDay; syncPerDay();
+};
+$('wkDays').onclick = function (ev) {
+  var box = ev.target.closest('.wk-day'); if (!box) return;
+  var st = F.days[box.dataset.d];
+  var chip = ev.target.closest('.chip');
+  if (chip) { st.picked[chip.dataset.w] = !st.picked[chip.dataset.w]; chip.classList.toggle('on', !!st.picked[chip.dataset.w]); return; }
+  if (ev.target.dataset.copy) {
+    var prev = F.days[box.previousElementSibling.dataset.d];
+    F.days[box.dataset.d] = { picked: Object.assign({}, prev.picked), etc: prev.etc };
+    syncPerDay();
+  }
+};
+$('wkDays').oninput = function (ev) {
+  if (!ev.target.classList.contains('wk-etc')) return;
+  F.days[ev.target.closest('.wk-day').dataset.d].etc = ev.target.value;
+};
+$('fDate').addEventListener('change', syncPerDay);
+$('fEnd').addEventListener('change', syncPerDay);
+function workersText() {
+  if (F.perDay) {
+    return dayList().map(function (d) { var ws = dayNames(F.days[d] || { picked: {}, etc: '' }); return ws.length ? md(d) + ' ' + ws.join(', ') : ''; })
+      .filter(String).join(' / ');
+  }
+  return dayNames({ picked: F.picked, etc: $('fWorkerEtc').value }).join(', ');
 }
 $('workers').onclick = function (ev) { var b = ev.target.closest('.chip'); if (!b) return; var w = b.dataset.w; F.picked[w] = !F.picked[w]; b.classList.toggle('on', !!F.picked[w]); };
 function drawPicks() {
@@ -1248,11 +1356,9 @@ function openForm(e) {
   $('fAddr').value = e ? (e.address || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
   $('fNote').value = e ? (e.note || '') : ''; $('pasteTxt').value = '';
   $('fAuthor').value = e ? (e.author || '') : (S.user ? S.user.name : store('hia_author'));
-  var ws = e && e.workers ? e.workers.split(/\s*,\s*/).filter(String) : [];
-  drawWorkers(ws.filter(function (w) { return S.cfg.workers.indexOf(w) >= 0; }));
-  $('fWorkerEtc').value = ws.filter(function (w) { return S.cfg.workers.indexOf(w) < 0; }).join(', ');
   $('items').innerHTML = ''; (e && e.items.length ? e.items : [{}]).forEach(function (i) { F.type = e ? e.type : F.type; addItem(i); });
   setType(e ? e.type : (S.user && S.user.role === 'contributor') ? '화성본드' : (S.tab !== '전체' ? S.tab : '시공일정'));
+  loadWorkers(e ? e.workers : '', e ? e.date : '');
   drawPicks(); $('bg').classList.add('on');
 }
 $('fab').onclick = function () { openForm(null); };
@@ -1284,12 +1390,7 @@ $('btnParse').onclick = function () {
     $('items').innerHTML = '';
     addItem({ name: body, qty: q ? q[1].replace(/,/g, '') : '', unit: q ? q[2].replace(/㎡|m²/, 'm2') : '' });
   }
-  if (got['인원'] !== undefined) {
-    var ws = got['인원'].split(/[,\s]+/).filter(String), known = [], etc = [], buf = [];
-    ws.forEach(function (w) { if (S.cfg.workers.indexOf(w) >= 0) known.push(w); else buf.push(w); });
-    if (buf.length) etc.push(buf.join(' '));
-    drawWorkers(known); $('fWorkerEtc').value = etc.join(', ');
-  }
+  if (got['인원'] !== undefined) loadWorkers(got['인원'].trim(), $('fDate').value);
   toast('칸을 채웠습니다. 내용을 확인해 주세요');
 };
 
@@ -1299,13 +1400,11 @@ $('btnSave').onclick = function () {
   if (!bond && !$('fSite').value.trim()) { toast('현장명을 입력해 주세요'); return; }
   var end = $('fEnd').value;
   if (!bond && end && end < $('fDate').value) { toast('종료일이 일자보다 빠릅니다'); return; }
-  var workers = S.cfg.workers.filter(function (w) { return F.picked[w]; });
-  $('fWorkerEtc').value.split(',').forEach(function (w) { w = w.trim(); if (w) workers.push(w); });
   var d = {
     id: F.id, type: F.type, date: $('fDate').value, endDate: bond ? '' : end,
     client: $('fClient').value, manager: $('fManager').value, company: $('fCompany').value,
     site: $('fSite').value, address: $('fAddr').value, items: readItems(),
-    chief: $('fChief').value, workers: workers.join(', '), note: $('fNote').value,
+    chief: $('fChief').value, workers: bond ? '' : workersText(), note: $('fNote').value,
     author: $('fAuthor').value.trim(), keep: F.keep.map(function (p) { return p.f; }), photos: F.news
   };
   if (!bond) {

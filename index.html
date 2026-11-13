@@ -144,8 +144,6 @@
   .addph { width: 92px; height: 92px; border-radius: 14px; border: 1.5px dashed rgba(90,98,130,.5); display: grid; place-items: center; color: var(--sub); font-size: 14px; cursor: pointer; flex: none; text-align: center; background: rgba(255,255,255,.5); }
   .primary { width: 100%; height: 54px; border: 0; border-radius: 16px; background: var(--navy); color: #fff; font: inherit; font-size: 17px; margin-top: 18px; cursor: pointer; }
   .primary:disabled { opacity: .55; }
-  details.paste { margin-bottom: 8px; padding: 10px 14px; border-radius: 16px; background: rgba(255,255,255,.55); border: 1px solid var(--line); }
-  details.paste summary { cursor: pointer; font-size: 14.5px; color: var(--sub); }
   .toast { position: fixed; z-index: 30; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(28,35,64,.92); color: #fff; padding: 11px 18px; border-radius: 999px; font-size: 14.5px; opacity: 0; pointer-events: none; transition: opacity .25s; max-width: 90vw; text-align: center; }
   .toast.on { opacity: 1; }
   .viewer { position: fixed; inset: 0; z-index: 20; background: rgba(15,18,35,.9); display: none; place-items: center; }
@@ -457,12 +455,6 @@
       <button class="chip" data-t="보수일정">보수일정</button>
       <button class="chip" data-t="화성본드">화성본드</button>
     </div>
-
-    <details class="paste" id="pasteBox">
-      <summary>밴드 형식 글 붙여넣기 (자동으로 칸 채우기)</summary>
-      <textarea id="pasteTxt" placeholder="#시공일정 2026년 11월 12일 (목)&#10;담당자 : …&#10;업체명 : …" style="margin-top:8px"></textarea>
-      <button class="mini" id="btnParse" style="margin-top:6px">칸 채우기</button>
-    </details>
 
     <div class="row2">
       <div><label class="f">일자 *</label><input type="date" id="fDate"></div>
@@ -1097,7 +1089,6 @@ function setType(t) {
   document.querySelectorAll('.only-total').forEach(function (el) { el.classList.toggle('hide', bond); });
   $('lblItems').textContent = bond ? '품목 (품목/규격 · 단위 · 수량)' : '내용 (내역 · 단위 · 수량)';
   $('lblNote').textContent = bond ? '비고' : '기타';
-  $('pasteBox').classList.toggle('hide', bond || !!F.id);
   if (F.days) syncPerDay();
   var cur = readItems(); $('items').innerHTML = ''; (cur.length ? cur : [{}]).forEach(addItem);
 }
@@ -1364,7 +1355,7 @@ function openForm(e) {
   $('fClient').value = e ? (e.client || '') : ''; $('fManager').value = e ? (e.manager || '') : '';
   $('fCompany').value = e ? (e.company || '') : ''; $('fSite').value = e ? (e.site || '') : '';
   $('fAddr').value = e ? (e.address || '') : ''; $('fAddr2').value = e ? (e.address2 || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
-  $('fNote').value = e ? (e.note || '') : ''; $('pasteTxt').value = '';
+  $('fNote').value = e ? (e.note || '') : '';
   $('fAuthor').value = e ? (e.author || '') : (S.user ? S.user.name : store('hia_author'));
   $('items').innerHTML = ''; (e && e.items.length ? e.items : [{}]).forEach(function (i) { F.type = e ? e.type : F.type; addItem(i); });
   setType(e ? e.type : (S.user && S.user.role === 'contributor') ? '화성본드' : (S.tab !== '전체' ? S.tab : '시공일정'));
@@ -1375,34 +1366,6 @@ $('fab').onclick = function () { openForm(null); };
 $('btnClose').onclick = function () { $('bg').classList.remove('on'); };
 $('seg').onclick = function (ev) { var b = ev.target.closest('.chip'); if (b) setType(b.dataset.t); };
 $('btnAddItem').onclick = function () { addItem({}); };
-
-// 밴드 형식 글에서 항목을 읽어 칸을 채웁니다.
-$('btnParse').onclick = function () {
-  var t = $('pasteTxt').value; if (!t.trim()) return;
-  if (/#\s*보수일정/.test(t)) setType('보수일정'); else if (/#\s*시공일정/.test(t)) setType('시공일정');
-  var m = t.match(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*(?:[~\-]\s*(\d{1,2}))?\s*일/);
-  if (m) { var p2 = function (n) { return ('0' + n).slice(-2); }; $('fDate').value = m[1] + '-' + p2(m[2]) + '-' + p2(m[3]); $('fEnd').value = m[4] ? m[1] + '-' + p2(m[2]) + '-' + p2(m[4]) : ''; }
-  var keys = ['담당자', '업체명', '현장명', '주소', '내용', '소장', '인원', '기타'], got = {};
-  var re = new RegExp('(' + keys.join('|') + ')\\s*[:：]', 'g'), marks = [], x;
-  while ((x = re.exec(t))) marks.push({ k: x[1], s: x.index, e: re.lastIndex });
-  marks.forEach(function (mk, i) { if (!got[mk.k]) got[mk.k] = t.slice(mk.e, i + 1 < marks.length ? marks[i + 1].s : t.length).trim(); });
-  if (got['담당자'] !== undefined) {
-    var who = got['담당자'], cl = S.cfg.clients.filter(function (c) { return who.indexOf(c) === 0; })[0];
-    $('fClient').value = cl || ''; $('fManager').value = cl ? who.slice(cl.length).trim() : who;
-  }
-  if (got['업체명'] !== undefined) $('fCompany').value = got['업체명'];
-  if (got['현장명'] !== undefined) $('fSite').value = got['현장명'];
-  if (got['주소'] !== undefined) $('fAddr').value = got['주소'].replace(/\s*\n\s*/g, ' ');
-  if (got['소장'] !== undefined) $('fChief').value = got['소장'].replace(/\s*\n\s*/g, ' ');
-  if (got['기타'] !== undefined) $('fNote').value = got['기타'].replace(/[ \t]+(?=\d{1,2}\.\s)/g, '\n').trim();
-  if (got['내용'] !== undefined) {
-    var body = got['내용'].replace(/\s*\n\s*/g, ' '), q = body.match(/([\d,]+(?:\.\d+)?)\s*(m2|㎡|m²|장|박스|통|롤)/i);
-    $('items').innerHTML = '';
-    addItem({ name: body, qty: q ? q[1].replace(/,/g, '') : '', unit: q ? q[2].replace(/㎡|m²/, 'm2') : '' });
-  }
-  if (got['인원'] !== undefined) loadWorkers(got['인원'].trim(), $('fDate').value);
-  toast('칸을 채웠습니다. 내용을 확인해 주세요');
-};
 
 $('btnSave').onclick = function () {
   var bond = F.type === '화성본드';

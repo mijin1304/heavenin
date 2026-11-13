@@ -273,6 +273,9 @@
   .blink { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--blue); text-decoration: none; }
   /* 뷰어 권한: 글쓰기 · 수정 · 삭제 버튼을 숨깁니다 */
   body.role-viewer .fab, body.role-viewer [data-a="edit"], body.role-viewer [data-a="del"], body.role-viewer [data-a="copy"] { display: none !important; }
+  /* 기여자: 화성본드만 새 글 · 수정 · 복사 (삭제 불가), 시공 · 보수일정은 댓글만 */
+  body.role-contrib [data-a="del"], body.role-contrib article[data-kind="total"] [data-a="edit"], body.role-contrib article[data-kind="total"] [data-a="copy"],
+  body.role-contrib #seg .chip:not([data-t="화성본드"]) { display: none !important; }
   /* 댓글 */
   .clist { margin-top: 12px; padding-top: 4px; border-top: 1px solid rgba(120,130,180,.2); }
   .cmt { padding: 9px 0; }
@@ -536,7 +539,8 @@ function load(cb) {
     S.user = r.user || null;
     if (r.bible) showBible(r.bible); else loadBible();
     applyLayout();
-    document.body.classList.toggle('role-viewer', !!(S.user && S.user.role !== 'editor'));
+    document.body.classList.toggle('role-viewer', !!(S.user && S.user.role === 'viewer'));
+    document.body.classList.toggle('role-contrib', !!(S.user && S.user.role === 'contributor'));
     render();
     if (cb) cb(true);
   }).catch(function (e) {
@@ -549,7 +553,7 @@ function load(cb) {
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock() {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
-  S.user = null; document.body.classList.remove('role-viewer');
+  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib');
   S.day = null; S.bibleDate = ''; applyLayout();
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   $('gateMsg').textContent = '접속코드를 다시 입력해 주세요';
@@ -570,7 +574,7 @@ function render() {
   drawCal();
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
-  $('sub').textContent = S.user ? S.user.name + ' · ' + (S.user.role === 'editor' ? '편집자' : '뷰어') : '';
+  $('sub').textContent = S.user ? S.user.name + ' · ' + ({ editor: '편집자', contributor: '기여자' }[S.user.role] || '뷰어') : '';
   if (!rows.length) { $('list').innerHTML = '<div class="empty glass card">표시할 글이 없습니다.</div>'; return; }
   var t = today();
   $('list').innerHTML = rows.map(function (e) {
@@ -589,7 +593,7 @@ function render() {
       add('내용', e.items.map(itemText).join('\n')); add('비고', e.note);
     }
     var th = e.photos.map(function (p) { return '<img class="ph" data-t="' + esc(p.t) + '" data-f="' + esc(p.f) + '" alt="사진">'; }).join('');
-    return '<article class="card glass" data-id="' + esc(e.id) + '">' +
+    return '<article class="card glass" data-id="' + esc(e.id) + '" data-kind="' + esc(e.kind) + '">' +
       '<div class="head"><span class="badge b-' + esc(e.type) + '">' + esc(e.type) + '</span><span class="date">' + esc(range) + '</span>' + (dd ? '<span class="dday">' + dd + '</span>' : '') + '</div>' +
       '<h2>' + esc(e.site || e.company || e.type) + '</h2><dl>' + d.join('') + '</dl>' +
       (th ? '<div class="thumbs">' + th + '</div>' : '') + fileHtml(e) +
@@ -1210,7 +1214,9 @@ $('attach').onchange = function () {
 };
 
 function openForm(e) {
-  if (S.user && S.user.role !== 'editor') { toast('보기 권한만 있어 글을 쓰거나 고칠 수 없습니다'); return; }
+  var role = S.user ? S.user.role : 'editor';
+  if (role === 'viewer') { toast('보기 권한만 있어 글을 쓰거나 고칠 수 없습니다'); return; }
+  if (role === 'contributor' && e && e.type !== '화성본드') { toast('기여자는 화성본드 글만 쓰고 고칠 수 있습니다'); return; }
   F.id = e ? e.id : ''; F.keep = e ? e.photos.slice() : []; F.news = [];
   F.fkeep = e && e.files ? e.files.slice() : []; F.fnews = []; drawFiles();
   $('ftitle').textContent = e ? '글 수정' : '새 글 쓰기';
@@ -1226,7 +1232,7 @@ function openForm(e) {
   drawWorkers(ws.filter(function (w) { return S.cfg.workers.indexOf(w) >= 0; }));
   $('fWorkerEtc').value = ws.filter(function (w) { return S.cfg.workers.indexOf(w) < 0; }).join(', ');
   $('items').innerHTML = ''; (e && e.items.length ? e.items : [{}]).forEach(function (i) { F.type = e ? e.type : F.type; addItem(i); });
-  setType(e ? e.type : (S.tab !== '전체' ? S.tab : '시공일정'));
+  setType(e ? e.type : (S.user && S.user.role === 'contributor') ? '화성본드' : (S.tab !== '전체' ? S.tab : '시공일정'));
   drawPicks(); $('bg').classList.add('on');
 }
 $('fab').onclick = function () { openForm(null); };

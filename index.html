@@ -481,7 +481,7 @@
 
     <label class="f">사진 (최대 10장)</label>
     <div class="thumbs" id="picks" style="margin-top:0;padding-top:6px"></div>
-    <input type="file" id="file" accept="image/*" multiple class="hide">
+    <input type="file" id="file" accept="image/*,.heic,.heif" multiple class="hide">
 
     <div class="only-total">
       <label class="f">파일 첨부 (최대 10개 · 파일당 10MB)</label>
@@ -663,7 +663,7 @@ function drawCPicks(card) {
   }).join('');
 }
 var cFile = document.createElement('input');
-cFile.type = 'file'; cFile.accept = 'image/*'; cFile.multiple = true; cFile.className = 'hide';
+cFile.type = 'file'; cFile.accept = 'image/*,.heic,.heif'; cFile.multiple = true; cFile.className = 'hide';
 document.body.appendChild(cFile);
 var cTarget = null;
 cFile.onchange = function () {
@@ -674,12 +674,7 @@ cFile.onchange = function () {
   if (files.length > room) { toast('댓글 사진은 5장까지 올릴 수 있습니다'); files = files.slice(0, Math.max(room, 0)); }
   files.reduce(function (chain, file) {
     return chain.then(function () {
-      return new Promise(function (res) {
-        var url = URL.createObjectURL(file), im = new Image();
-        im.onload = function () { d.photos.push({ full: shrink(im, 1600, .82), thumb: shrink(im, 360, .7) }); URL.revokeObjectURL(url); drawCPicks(card); res(); };
-        im.onerror = function () { toast('열 수 없는 사진이 있습니다'); res(); };
-        im.src = url;
-      });
+      return loadPic(file).then(function (p) { if (p) { d.photos.push(p); drawCPicks(card); } });
     });
   }, Promise.resolve());
 };
@@ -1134,6 +1129,36 @@ $('picks').addEventListener('click', function (ev) {
   if (b.dataset.k !== undefined) F.keep.splice(+b.dataset.k, 1); else F.news.splice(+b.dataset.n, 1);
   drawPicks();
 });
+// 사진 불러오기: 아이폰 사진(HEIC)처럼 PC 브라우저가 바로 못 여는 사진은 JPG로 바꿔서 올립니다.
+var HEIC_LIB = null;
+function isHeic(f) { return /hei[cf]/i.test(f.type || '') || /\.(heic|heif)$/i.test(f.name || ''); }
+function heicLib() {
+  return HEIC_LIB || (HEIC_LIB = new Promise(function (res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+    s.onload = function () { res(window.heic2any); };
+    s.onerror = function () { HEIC_LIB = null; rej(new Error('heic')); };
+    document.head.appendChild(s);
+  }));
+}
+function imgFrom(blob) {
+  return new Promise(function (res, rej) {
+    var url = URL.createObjectURL(blob), im = new Image();
+    im.onload = function () { URL.revokeObjectURL(url); res(im); };
+    im.onerror = function () { URL.revokeObjectURL(url); rej(new Error('img')); };
+    im.src = url;
+  });
+}
+function loadPic(file) {
+  return imgFrom(file).catch(function () {
+    if (!isHeic(file)) throw new Error('img');
+    toast('아이폰 사진(HEIC)을 JPG로 바꾸는 중입니다…');
+    return heicLib().then(function (h) { return h({ blob: file, toType: 'image/jpeg', quality: 0.9 }); })
+      .then(function (b) { return imgFrom(Array.isArray(b) ? b[0] : b); });
+  }).then(function (im) {
+    return { full: shrink(im, 1600, .82), thumb: shrink(im, 360, .7) };
+  }).catch(function () { toast('열 수 없는 사진입니다: ' + file.name); return null; });
+}
 function shrink(img, max, q) {
   var r = Math.min(1, max / Math.max(img.width, img.height));
   var c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
@@ -1146,12 +1171,7 @@ $('file').onchange = function () {
   if (files.length > room) { toast('사진은 최대 10장까지 올릴 수 있습니다'); files = files.slice(0, Math.max(room, 0)); }
   files.reduce(function (chain, file) {
     return chain.then(function () {
-      return new Promise(function (res) {
-        var url = URL.createObjectURL(file), im = new Image();
-        im.onload = function () { F.news.push({ full: shrink(im, 1600, .82), thumb: shrink(im, 360, .7) }); URL.revokeObjectURL(url); drawPicks(); res(); };
-        im.onerror = function () { toast('열 수 없는 사진이 있습니다'); res(); };
-        im.src = url;
-      });
+      return loadPic(file).then(function (p) { if (p) { F.news.push(p); drawPicks(); } });
     });
   }, Promise.resolve());
 };

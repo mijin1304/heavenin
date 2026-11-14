@@ -70,6 +70,16 @@
   .icon-btn.spin svg { animation: icSpin .8s linear infinite; }
   @keyframes icSpin { to { transform: rotate(360deg); } }
   .icon-btn.dev-btn svg rect { fill: var(--navy); }
+  .icon-btn { position: relative; }
+  .dev-badge {
+    position: absolute; top: -6px; right: -6px; display: none; place-items: center; min-width: 21px; height: 21px; padding: 0 5px;
+    border-radius: 999px; border: 2px solid #fff; background: linear-gradient(160deg, #f0656b, #d2484f); color: #fff;
+    font-size: 11.5px; font-weight: 700; line-height: 1; box-shadow: 0 4px 10px rgba(210,72,79,.4);
+  }
+  .dev-badge.on { display: grid; animation: badgePop .35s ease; }
+  .icon-btn.dev-btn.has-req { animation: reqPulse 2.4s ease-in-out infinite; }
+  @keyframes badgePop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @keyframes reqPulse { 0%, 100% { box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(255,255,255,.95); } 50% { box-shadow: 0 0 0 5px rgba(210,72,79,.16), 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(255,255,255,.95); } }
 
   .tabs { display: flex; gap: 6px; padding: 6px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
@@ -394,7 +404,7 @@
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
     <button class="icon-btn" id="btnReload" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.5 3.5v5h-5"/></svg></button>
-    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 승인·관리 (관리자)" aria-label="기기 승인"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 승인·관리 (관리자)" aria-label="기기 승인"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="dev-badge" id="devBadge"></span></button>
   </header>
 
   <nav class="tabs glass" id="tabs">
@@ -595,6 +605,7 @@ function load(cb) {
     document.body.classList.toggle('role-contrib', !!(S.user && S.user.role === 'contributor'));
     document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
     document.body.classList.toggle('role-admin', !!(S.user && S.user.admin));
+    setPending(S.user && S.user.admin ? r.pending : 0);
     render();
     if (cb) cb(true);
   }).catch(function (e) {
@@ -608,7 +619,7 @@ function load(cb) {
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock(why) {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
-  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib', 'role-editor', 'role-admin'); $('devBg').classList.remove('on');
+  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib', 'role-editor', 'role-admin'); $('devBg').classList.remove('on'); setPending(0);
   S.day = null; S.bibleDate = ''; applyLayout();
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   gateStep(false, why || '접속코드를 다시 입력해 주세요');
@@ -1548,9 +1559,27 @@ $('gateForm').onsubmit = function (ev) {
 };
 
 /* ---------- 등록 기기 승인·관리 (관리자) ---------- */
+// 승인 대기 기기 수를 [승인] 버튼에 빨간 숫자로 보여 주고, 새 요청이 생기면 알려 줍니다. (관리자는 메일로도 알림을 받습니다)
+function setPending(n) {
+  n = +n || 0;
+  var b = $('devBadge'), btn = $('btnDev');
+  b.textContent = n > 9 ? '9+' : String(n);
+  b.classList.toggle('on', n > 0);
+  btn.classList.toggle('has-req', n > 0);
+  btn.title = n ? '기기 승인 요청 ' + n + '건' : '등록 기기 승인·관리 (관리자)';
+  if (n > (S.pend || 0) && S.user && S.user.admin && !$('devBg').classList.contains('on')) toast('🔔 기기 승인 요청 ' + n + '건이 있습니다');
+  S.pend = n;
+}
+function pollPending() {
+  if (!S.code || !S.user || !S.user.admin || document.hidden) return;
+  call('pendingDevices').then(setPending).catch(function () {});
+}
+setInterval(pollPending, 60 * 1000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) pollPending(); });
 function openDevices() { $('devBg').classList.add('on'); $('devList').innerHTML = '<p class="dev-note">불러오는 중…</p>'; loadDevices(); }
 function loadDevices() {
   call('listDevices').then(function (list) {
+    setPending(list.filter(function (d) { return d.status !== '승인'; }).length);
     if (!list.length) { $('devList').innerHTML = '<p class="dev-note">등록된 기기가 없습니다.</p>'; return; }
     var by = {}, order = [];
     list.forEach(function (d) { if (!by[d.name]) { by[d.name] = []; order.push(d.name); } by[d.name].push(d); });

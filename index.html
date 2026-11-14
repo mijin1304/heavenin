@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>헤븐인 업무일정</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#eef1fb">
+<meta name="theme-color" content="#eef1fb" id="metaTheme">
+<script>(function () { var m = 'system'; try { m = localStorage.getItem('hia_theme') || 'system'; } catch (e) {} var d = m === 'dark' || (m !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.setAttribute('data-theme', d ? 'dark' : 'light'); })();</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="헤븐인">
@@ -20,11 +21,30 @@
 <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
-    --ink: #1c2340; --sub: #5a6282; --line: rgba(255,255,255,.65);
-    --glass: rgba(255,255,255,.52); --glass-strong: rgba(255,255,255,.78);
+    --ink: #1c2340; --sub: #5a6282; --line: rgba(var(--w),.65);
+    --glass: rgba(var(--w),.52); --glass-strong: rgba(var(--w),.78);
     --navy: #232c63; --gold: #f2b63c; --blue: #3f6fe0; --green: #1f9d78; --amber: #c98512; --red: #d2484f;
-    --radius: 22px;
+    --radius: 22px; --violet: #7a5af0;
+    --w: 255,255,255; --nv: 35,44,99; --sheet: rgba(245,247,255,.9); --toast: rgba(28,35,64,.92);
+    --bg0: #eef1fb; --bg1: #c9d6ff; --bg2: #ffe3c2; --bg3: #c8f1e4;
   }
+  /* 다크 모드: 화면 모드에서 [다크]를 고르거나 [시스템 설정]이 어두운 테마일 때 */
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --ink: #e9ecfa; --sub: #a4acc9; --line: rgba(255,255,255,.11);
+    --glass: rgba(32,38,66,.6); --glass-strong: rgba(66,76,120,.92);
+    --navy: #5a6cd8; --blue: #82a4ff; --green: #3cc39a; --amber: #e0a23a; --red: #f2777d; --violet: #a58cff;
+    --w: 50,58,94; --nv: 150,165,255; --sheet: rgba(22,26,48,.95); --toast: rgba(78,88,136,.97);
+    --bg0: #0e1124; --bg1: #26326a; --bg2: #4a3222; --bg3: #153b37;
+  }
+  html[data-theme="dark"] .b-시공일정, html[data-theme="dark"] .d-시공일정 { background: #3f6fe0; }
+  html[data-theme="dark"] .b-보수일정 { background: #1f9d78; }
+  html[data-theme="dark"] .b-화성본드 { background: #c98512; }
+  html[data-theme="dark"] .b-자재판매 { background: #7a5af0; }
+  html[data-theme="dark"] .icon-btn { color: #cfd6ff; border-color: rgba(255,255,255,.14); }
+  html[data-theme="dark"] .dev-wait { color: #f0a54a; }
+  html[data-theme="dark"] .dev-badge { border-color: #1b2040; }
+  html[data-theme="dark"] body::before { opacity: .12; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; min-height: 100%; }
   body {
@@ -32,10 +52,10 @@
     letter-spacing: -0.01em; -webkit-font-smoothing: antialiased;
     color: var(--ink); font-size: 16px; line-height: 1.55;
     background:
-      radial-gradient(60vmax 60vmax at 8% 0%, #c9d6ff 0%, transparent 60%),
-      radial-gradient(55vmax 55vmax at 100% 20%, #ffe3c2 0%, transparent 60%),
-      radial-gradient(60vmax 60vmax at 40% 100%, #c8f1e4 0%, transparent 60%),
-      #eef1fb;
+      radial-gradient(60vmax 60vmax at 8% 0%, var(--bg1) 0%, transparent 60%),
+      radial-gradient(55vmax 55vmax at 100% 20%, var(--bg2) 0%, transparent 60%),
+      radial-gradient(60vmax 60vmax at 40% 100%, var(--bg3) 0%, transparent 60%),
+      var(--bg0);
     background-attachment: fixed;
   }
   /* 미묘한 노이즈 질감 */
@@ -47,23 +67,23 @@
   .glass {
     background: var(--glass); border: 1px solid var(--line); border-radius: var(--radius);
     -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
-    box-shadow: 0 10px 30px rgba(40,50,110,.10), inset 0 1px 0 rgba(255,255,255,.6);
+    box-shadow: 0 10px 30px rgba(40,50,110,.10), inset 0 1px 0 rgba(var(--w),.6);
   }
   header.top { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 12px; }
   .logo { width: 44px; height: 44px; border-radius: 14px; background: var(--navy); color: var(--gold); display: grid; place-items: center; font-size: 13px; letter-spacing: .5px; flex: none; }
   header.top h1 { font-size: 19px; margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header.top p { margin: 0; font-size: 13px; color: var(--sub); }
-  header.top > div { min-width: 0; }
+  header.top > div { flex: 1; min-width: 0; }
   .icon-btn {
-    position: relative; flex: none; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: auto;
-    border-radius: 16px; border: 1px solid rgba(255,255,255,.75); color: var(--navy); cursor: pointer;
-    background: linear-gradient(145deg, rgba(255,255,255,.88), rgba(255,255,255,.42));
+    position: relative; flex: none; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: 0;
+    border-radius: 16px; border: 1px solid rgba(var(--w),.75); color: var(--navy); cursor: pointer;
+    background: linear-gradient(145deg, rgba(var(--w),.88), rgba(var(--w),.42));
     -webkit-backdrop-filter: blur(14px) saturate(150%); backdrop-filter: blur(14px) saturate(150%);
-    box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(120,130,180,.12);
+    box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(var(--w),.95), inset 0 -1px 0 rgba(120,130,180,.12);
     transition: transform .15s ease, box-shadow .2s ease, background .2s ease; -webkit-tap-highlight-color: transparent;
   }
   .icon-btn svg { width: 22px; height: 22px; display: block; }
-  .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(255,255,255,.95); background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.55)); }
+  .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(var(--w),.95); background: linear-gradient(145deg, rgba(var(--w),.96), rgba(var(--w),.55)); }
   .icon-btn:active { transform: scale(.92); }
   .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(63,111,224,.25), 0 6px 18px rgba(40,50,110,.14); }
   .icon-btn.spin svg { animation: icSpin .8s linear infinite; }
@@ -77,7 +97,7 @@
   .dev-badge.on { display: grid; animation: badgePop .35s ease; }
   .icon-btn.dev-btn.has-req { animation: reqPulse 2.4s ease-in-out infinite; }
   @keyframes badgePop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
-  @keyframes reqPulse { 0%, 100% { box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(255,255,255,.95); } 50% { box-shadow: 0 0 0 5px rgba(210,72,79,.16), 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(255,255,255,.95); } }
+  @keyframes reqPulse { 0%, 100% { box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(var(--w),.95); } 50% { box-shadow: 0 0 0 5px rgba(210,72,79,.16), 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(var(--w),.95); } }
 
   .tabs { display: flex; gap: 6px; padding: 6px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
@@ -87,11 +107,12 @@
   .tools input { flex: 1; min-width: 0; }
   input, textarea, select {
     font: inherit; color: var(--ink); width: 100%; padding: 12px 14px; border-radius: 14px;
-    border: 1px solid rgba(120,130,180,.28); background: rgba(255,255,255,.72); outline: none;
+    border: 1px solid rgba(120,130,180,.28); background: rgba(var(--w),.72); outline: none;
   }
+  input, textarea, select { color: var(--ink); }
   input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(63,111,224,.16); }
   textarea { resize: vertical; min-height: 92px; }
-  .chip { border: 1px solid rgba(120,130,180,.28); background: rgba(255,255,255,.6); border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 14px; color: var(--sub); cursor: pointer; white-space: nowrap; }
+  .chip { border: 1px solid rgba(120,130,180,.28); background: rgba(var(--w),.6); border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 14px; color: var(--sub); cursor: pointer; white-space: nowrap; }
   .chip.on { background: var(--navy); border-color: var(--navy); color: #fff; }
 
   .card { padding: 16px; margin-bottom: 12px; }
@@ -105,10 +126,11 @@
   dt { color: var(--sub); } dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
   dd a { color: var(--blue); text-decoration: none; }
   .thumbs { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; }
-  .thumbs img, .thumbs .ph { width: 92px; height: 92px; border-radius: 14px; object-fit: cover; flex: none; background: rgba(255,255,255,.6); border: 1px solid var(--line); cursor: zoom-in; }
+  .thumbs img, .thumbs .ph { width: 92px; height: 92px; border-radius: 14px; object-fit: cover; flex: none; background: rgba(var(--w),.6); border: 1px solid var(--line); cursor: zoom-in; }
   .acts { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-  .acts .by { font-size: 12.5px; color: var(--sub); margin-right: auto; }
-  .mini { border: 1px solid rgba(120,130,180,.28); background: rgba(255,255,255,.6); border-radius: 12px; padding: 7px 12px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+  .acts .by { font-size: 12.5px; color: var(--sub); margin-right: auto; min-width: 0; }
+  .acts .mini { flex: none; white-space: nowrap; }
+  .mini { border: 1px solid rgba(120,130,180,.28); background: rgba(var(--w),.6); border-radius: 12px; padding: 7px 12px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
   .mini.danger { color: var(--red); }
   .empty { text-align: center; color: var(--sub); padding: 40px 16px; }
 
@@ -117,7 +139,7 @@
 
   .sheet-bg { position: fixed; inset: 0; z-index: 10; background: rgba(28,35,64,.35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: none; align-items: flex-end; justify-content: center; }
   .sheet-bg.on { display: flex; }
-  .sheet { width: 100%; max-width: 760px; max-height: 94vh; overflow-y: auto; padding: 18px 16px calc(24px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; background: rgba(245,247,255,.9); }
+  .sheet { width: 100%; max-width: 760px; max-height: 94vh; overflow-y: auto; padding: 18px 16px calc(24px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; background: var(--sheet); }
   @media (min-width: 800px) { .sheet-bg { align-items: center; } .sheet { border-radius: 26px; } }
   .sheet h3 { margin: 0 0 12px; font-size: 19px; font-weight: 700; display: flex; align-items: center; }
   .sheet h3 button { margin-left: auto; }
@@ -134,7 +156,7 @@
   input[type="date"]::-webkit-calendar-picker-indicator { margin-left: 2px; }
   @media (max-width: 420px) { .row2 label.f { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } input[type="date"] { padding-left: 10px; padding-right: 8px; font-size: 15px; } }
   /* 선택 목록 (설정 탭 목록) — PC · 모바일 공통 */
-  .sug { position: fixed; z-index: 70; display: none; max-height: 240px; overflow-y: auto; padding: 5px; border-radius: 16px; background: rgba(255,255,255,.94); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid var(--line); box-shadow: 0 16px 36px rgba(40,50,110,.2); -webkit-overflow-scrolling: touch; }
+  .sug { position: fixed; z-index: 70; display: none; max-height: 240px; overflow-y: auto; padding: 5px; border-radius: 16px; background: rgba(var(--w),.94); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid var(--line); box-shadow: 0 16px 36px rgba(40,50,110,.2); -webkit-overflow-scrolling: touch; }
   .sug.on { display: block; }
   .sug button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 11px 12px; border-radius: 11px; font: inherit; font-size: 15px; color: var(--ink); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sug button:hover, .sug button.act { background: rgba(63,111,224,.1); }
@@ -146,7 +168,7 @@
   /* 인원: 여러 날 공사일 때 날짜별 입력 */
   .wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
   .wk-head .mini { margin-bottom: 5px; }
-  .wk-day { margin-top: 8px; padding: 10px 12px 12px; border-radius: 16px; background: rgba(255,255,255,.45); border: 1px solid var(--line); }
+  .wk-day { margin-top: 8px; padding: 10px 12px 12px; border-radius: 16px; background: rgba(var(--w),.45); border: 1px solid var(--line); }
   .wk-dh { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 14px; }
   .wk-dh b { color: var(--navy); }
   .wk-day .wk-etc { margin-top: 8px; }
@@ -154,25 +176,39 @@
   .pick img { width: 100%; height: 100%; border-radius: 14px; object-fit: cover; }
   .pick .x { position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; border-radius: 50%; background: var(--red); color: #fff; font-size: 15px; }
   .flist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  .fitem { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(255,255,255,.62); border: 1px solid var(--line); font-size: 14px; }
+  .fitem { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 14px; background: rgba(var(--w),.62); border: 1px solid var(--line); font-size: 14px; }
   .fitem .fn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fitem small { flex: none; color: var(--sub); font-size: 12px; }
   .fitem .x { flex: none; width: 28px; height: 28px; border-radius: 50%; font-size: 15px; }
   .files { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-  .fdl { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 1px solid var(--line); background: rgba(255,255,255,.6); border-radius: 14px; padding: 10px 12px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
-  .fdl:hover { background: rgba(255,255,255,.9); }
+  .fdl { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 1px solid var(--line); background: rgba(var(--w),.6); border-radius: 14px; padding: 10px 12px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .fdl:hover { background: rgba(var(--w),.9); }
   .fdl span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
   .fdl small { flex: none; color: var(--sub); font-size: 12px; pointer-events: none; }
   .fdl i { font-style: normal; pointer-events: none; }
-  .addph { width: 92px; height: 92px; border-radius: 14px; border: 1.5px dashed rgba(90,98,130,.5); display: grid; place-items: center; color: var(--sub); font-size: 14px; cursor: pointer; flex: none; text-align: center; background: rgba(255,255,255,.5); }
+  .addph { width: 92px; height: 92px; border-radius: 14px; border: 1.5px dashed rgba(90,98,130,.5); display: grid; place-items: center; color: var(--sub); font-size: 14px; cursor: pointer; flex: none; text-align: center; background: rgba(var(--w),.5); }
   .primary { width: 100%; height: 54px; border: 0; border-radius: 16px; background: var(--navy); color: #fff; font: inherit; font-size: 17px; margin-top: 18px; cursor: pointer; }
   .primary:disabled { opacity: .55; }
-  .toast { position: fixed; z-index: 30; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(28,35,64,.92); color: #fff; padding: 11px 18px; border-radius: 999px; font-size: 14.5px; opacity: 0; pointer-events: none; transition: opacity .25s; max-width: 90vw; text-align: center; }
+  .toast { position: fixed; z-index: 30; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--toast); color: #fff; padding: 11px 18px; border-radius: 999px; font-size: 14.5px; opacity: 0; pointer-events: none; transition: opacity .25s; max-width: 90vw; text-align: center; }
   .toast.on { opacity: 1; }
   .viewer { position: fixed; inset: 0; z-index: 20; background: rgba(15,18,35,.9); display: none; place-items: center; }
   .viewer.on { display: grid; }
   .viewer img { max-width: 96vw; max-height: 92vh; border-radius: 12px; }
   .hide { display: none !important; }
+  body:not(.role-editor) .ed-only { display: none !important; } /* 자재판매는 편집자 · 관리자만 */
+  .b-자재판매 { background: var(--violet); } .d-자재판매 { background: #7a5af0; }
+  .item.sale { grid-template-columns: 1fr 70px 70px 100px 38px; }
+  @media (max-width: 520px) { .item.sale { grid-template-columns: 1fr 1fr 1.3fr 38px; } }
+  .sum { display: block; margin-top: 2px; font-weight: 600; }
+  @media (max-width: 420px) { header.top { gap: 8px; padding: 12px; } .icon-btn { width: 40px; height: 40px; border-radius: 14px; } .icon-btn svg { width: 20px; height: 20px; } }
+  /* 화면 모드 고르기 */
+  .theme-menu { position: fixed; z-index: 40; display: none; min-width: 168px; padding: 6px; border-radius: 18px; background: rgba(var(--w),.92); border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); box-shadow: 0 16px 36px rgba(20,25,60,.22); }
+  .theme-menu.on { display: block; }
+  .theme-menu button { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 15px; color: var(--ink); cursor: pointer; text-align: left; }
+  .theme-menu button:hover { background: rgba(var(--nv),.1); }
+  .theme-menu button.on { background: var(--navy); color: #fff; }
+  .theme-menu svg { width: 18px; height: 18px; flex: none; }
 
   /* ---------- PC 위젯 (넓은 화면에서만 양옆에 표시) ---------- */
   .side { display: none; }
@@ -201,8 +237,8 @@
   .w-h:active { cursor: grabbing; }
   .w-g { flex: none; width: 14px; color: rgba(90,98,130,.55); font-size: 13px; letter-spacing: -2px; }
   .w-t { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .w-btn { flex: none; border: 0; height: 26px; min-width: 26px; padding: 0 7px; border-radius: 9px; background: rgba(255,255,255,.62); font: inherit; font-size: 12px; color: var(--sub); cursor: pointer; }
-  .w-btn:hover { background: rgba(255,255,255,.9); color: var(--ink); }
+  .w-btn { flex: none; border: 0; height: 26px; min-width: 26px; padding: 0 7px; border-radius: 9px; background: rgba(var(--w),.62); font: inherit; font-size: 12px; color: var(--sub); cursor: pointer; }
+  .w-btn:hover { background: rgba(var(--w),.9); color: var(--ink); }
   .w-sz { font-variant-numeric: tabular-nums; }
   .w-b { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
   .w-b::-webkit-scrollbar { display: none; }
@@ -214,7 +250,7 @@
   .w.ins-left { box-shadow: -4px 0 0 0 var(--blue), 0 10px 30px rgba(40,50,110,.10); }
   .w.ins-right { box-shadow: 4px 0 0 0 var(--blue), 0 10px 30px rgba(40,50,110,.10); }
   .w-reset { flex: none; align-self: center; border: 0; background: transparent; font: inherit; font-size: 12px; color: var(--sub); opacity: .7; cursor: pointer; padding: 4px 10px; border-radius: 999px; }
-  .w-reset:hover { opacity: 1; background: rgba(255,255,255,.5); }
+  .w-reset:hover { opacity: 1; background: rgba(var(--w),.5); }
   /* 작은 크기에서는 덜 중요한 내용을 숨깁니다 */
   .w[data-w="cal"][data-size="2x2"] .cal-d { min-height: 0; padding: 1px 0; gap: 1px; }
   .w[data-w="cal"][data-size="2x2"] .cal-d span { width: 22px; height: 22px; }
@@ -231,19 +267,19 @@
   .w[data-w="bible"][data-size="1x1"] .bv { font-size: 13px; line-height: 1.6; }
   .w[data-w="bible"][data-size="1x1"] .bref { font-size: 12px; }
   /* 빠른메모 */
-  .memo-tx { display: block; width: 100%; height: 100%; min-height: 0; resize: none; padding: 10px 12px; font-size: 14px; line-height: 1.6; border-radius: 14px; background: rgba(255,255,255,.55); }
+  .memo-tx { display: block; width: 100%; height: 100%; min-height: 0; resize: none; padding: 10px 12px; font-size: 14px; line-height: 1.6; border-radius: 14px; background: rgba(var(--w),.55); }
   .w-note { font-size: 11px; font-weight: 400; color: var(--green); opacity: 0; transition: opacity .3s; margin-left: 4px; }
   .w-note.on { opacity: 1; }
   /* 계산기 */
   .calc { height: 100%; display: flex; flex-direction: column; gap: 7px; outline: none; }
-  .calc-d { flex: none; padding: 5px 10px; border-radius: 12px; background: rgba(255,255,255,.62); text-align: right; overflow: hidden; }
+  .calc-d { flex: none; padding: 5px 10px; border-radius: 12px; background: rgba(var(--w),.62); text-align: right; overflow: hidden; }
   .calc-e { height: 16px; font-size: 11.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .calc-v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
   .calc-k { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 5px; }
-  .calc-k button { min-height: 0; border: 0; border-radius: 10px; background: rgba(255,255,255,.72); font: inherit; font-size: 15px; color: var(--ink); cursor: pointer; padding: 0; }
-  .calc-k button:hover { background: rgba(255,255,255,.95); }
+  .calc-k button { min-height: 0; border: 0; border-radius: 10px; background: rgba(var(--w),.72); font: inherit; font-size: 15px; color: var(--ink); cursor: pointer; padding: 0; }
+  .calc-k button:hover { background: rgba(var(--w),.95); }
   .calc-k button:active { transform: scale(.96); }
-  .calc-k .op { background: rgba(35,44,99,.09); color: var(--navy); font-weight: 600; }
+  .calc-k .op { background: rgba(var(--nv),.09); color: var(--navy); font-weight: 600; }
   .calc-k .fn { color: var(--sub); }
   .calc-k .eq { background: var(--navy); color: #fff; font-weight: 600; }
   .calc-k .eq:hover { background: #2f3a7d; }
@@ -269,9 +305,9 @@
   .cal-d { min-height: 40px; padding: 3px 0; border: 0; border-radius: 10px; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; font-size: 13px; color: var(--ink); cursor: default; }
   .cal-d span { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 999px; }
   .cal-d.has { cursor: pointer; }
-  .cal-d.has:hover { background: rgba(255,255,255,.75); }
+  .cal-d.has:hover { background: rgba(var(--w),.75); }
   .cal-d.today span { background: var(--navy); color: #fff; }
-  .cal-d.sel { background: rgba(35,44,99,.12); }
+  .cal-d.sel { background: rgba(var(--nv),.12); }
   .cal-d em { height: 6px; display: flex; gap: 3px; }
   .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .d-시공일정 { background: #3f6fe0; } .d-보수일정 { background: #1f9d78; } .d-화성본드 { background: #f08a24; }
@@ -288,7 +324,7 @@
   .wx-desc { font-size: 13px; color: var(--sub); }
   .wx-meta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--sub); }
   .wx-days { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .wx-day { padding: 6px 2px; border-radius: 12px; background: rgba(255,255,255,.5); text-align: center; font-size: 12px; }
+  .wx-day { padding: 6px 2px; border-radius: 12px; background: rgba(var(--w),.5); text-align: center; font-size: 12px; }
   .wx-day b { display: block; margin: 2px 0; font-size: 18px; font-weight: 400; }
   .wx-msg { padding: 6px 0; font-size: 13px; color: var(--sub); }
   .wx-msg a { color: var(--blue); }
@@ -324,10 +360,10 @@
   .gate {
     position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; overflow: hidden;
     background:
-      radial-gradient(60vmax 60vmax at 8% 0%, #c9d6ff 0%, transparent 60%),
-      radial-gradient(55vmax 55vmax at 100% 20%, #ffe3c2 0%, transparent 60%),
-      radial-gradient(60vmax 60vmax at 40% 100%, #c8f1e4 0%, transparent 60%),
-      #eef1fb;
+      radial-gradient(60vmax 60vmax at 8% 0%, var(--bg1) 0%, transparent 60%),
+      radial-gradient(55vmax 55vmax at 100% 20%, var(--bg2) 0%, transparent 60%),
+      radial-gradient(60vmax 60vmax at 40% 100%, var(--bg3) 0%, transparent 60%),
+      var(--bg0);
     transition: opacity .45s ease, visibility .45s ease;
   }
   .gate.off { opacity: 0; visibility: hidden; }
@@ -369,7 +405,7 @@
   body.role-admin .icon-btn.dev-btn { display: grid; }
   .dev-note { margin: 0 0 6px; font-size: 13.5px; color: var(--sub); }
   .dev-name { margin: 14px 0 6px; font-size: 14px; font-weight: 600; color: var(--sub); }
-  .dev-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.6); }
+  .dev-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(var(--w),.6); }
   .dev-row .dl { flex: 1; min-width: 0; }
   .dev-row small { display: block; font-size: 12.5px; color: var(--sub); }
   .dev-wait { color: #b45309; font-weight: 600; }
@@ -398,10 +434,16 @@
     </form>
   </div>
 </div>
+<div class="theme-menu" id="themeMenu" role="menu" aria-label="화면 모드">
+  <button data-m="light" role="menuitemradio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>라이트 모드</button>
+  <button data-m="dark" role="menuitemradio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>다크 모드</button>
+  <button data-m="system" role="menuitemradio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2.5"/><path d="M9 20h6M12 16.5V20"/></svg>시스템 설정</button>
+</div>
 <div class="wrap">
   <header class="top glass">
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
+    <button class="icon-btn" id="btnTheme" title="화면 모드" aria-label="화면 모드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" stroke="none"/></svg></button>
     <button class="icon-btn" id="btnReload" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.5 3.5v5h-5"/></svg></button>
     <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 승인·관리 (관리자)" aria-label="기기 승인"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="dev-badge" id="devBadge"></span></button>
   </header>
@@ -411,6 +453,7 @@
     <button class="tab" data-t="시공일정">시공일정</button>
     <button class="tab" data-t="보수일정">보수일정</button>
     <button class="tab" data-t="화성본드">화성본드</button>
+    <button class="tab ed-only" data-t="자재판매">자재판매</button>
   </nav>
   <div class="tools">
     <input id="q" type="search" placeholder="현장명, 업체명, 주소, 인원 검색">
@@ -426,7 +469,7 @@
       <div class="w-h"><span class="w-g">⠿</span><b class="w-t" id="calTitle"></b><button class="w-btn" id="calPrev" aria-label="이전 달">‹</button><button class="w-btn" id="calNext" aria-label="다음 달">›</button><button class="w-btn w-sz" title="크기 바꾸기"></button></div>
       <div class="w-b">
         <div class="cal-g" id="calGrid"></div>
-        <div class="cal-legend"><span><i class="dot d-시공일정"></i>시공</span><span><i class="dot d-보수일정"></i>보수</span><span><i class="dot d-화성본드"></i>화성본드</span></div>
+        <div class="cal-legend"><span><i class="dot d-시공일정"></i>시공</span><span><i class="dot d-보수일정"></i>보수</span><span><i class="dot d-화성본드"></i>화성본드</span><span class="ed-only"><i class="dot d-자재판매"></i>자재</span></div>
       </div>
     </section>
     <section class="w glass" data-w="calc" data-size="2x2">
@@ -485,6 +528,7 @@
       <button class="chip on" data-t="시공일정">시공일정</button>
       <button class="chip" data-t="보수일정">보수일정</button>
       <button class="chip" data-t="화성본드">화성본드</button>
+      <button class="chip ed-only" data-t="자재판매">자재판매</button>
     </div>
 
     <div class="row2">
@@ -495,9 +539,9 @@
       <div><label class="f">거래처</label><input id="fClient" data-sug="clients" autocomplete="off" placeholder="예: 유앤어스"></div>
       <div><label class="f">담당자</label><input id="fManager" placeholder="예: 노태훈 차장"></div>
     </div>
-    <div class="only-total"><label class="f">업체명</label><input id="fCompany"></div>
+    <div class="only-total also-sale"><label class="f" id="lblCompany">업체명</label><input id="fCompany"></div>
     <label class="f">현장명</label><input id="fSite">
-    <div class="only-total"><label class="f">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
+    <div class="only-total also-sale"><label class="f" id="lblAddr">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
     <div class="only-total"><label class="f">세부주소 <span class="hint">· 층수, 게이트 등 (시트에는 안 들어감)</span></label><input id="fAddr2" placeholder="예: 32층 / 2번 게이트 / 1층에 스타벅스"></div>
 
     <label class="f" id="lblItems">내용 (내역 · 단위 · 수량)</label>
@@ -605,6 +649,7 @@ function load(cb) {
     document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
     document.body.classList.toggle('role-admin', !!(S.user && S.user.admin));
     setPending(S.user && S.user.admin ? r.pending : 0);
+    if (S.tab === '자재판매' && !(S.user && S.user.role === 'editor')) { S.tab = '전체'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.t === '전체'); }); }
     render();
     if (cb) cb(true);
   }).catch(function (e) {
@@ -635,6 +680,11 @@ function match(e) {
   return true;
 }
 function itemText(i) { return i.name + (i.qty ? ' ' + i.qty + (i.unit || '') : ''); }
+// 자재판매: 품목 수량 × 단가 = 금액
+function won(n) { return Math.round(n).toLocaleString('ko-KR') + '원'; }
+function pnum(v) { var n = parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isNaN(n) ? 0 : n; }
+function saleLine(i) { var q = pnum(i.qty), p = pnum(i.price); return itemText(i) + (p ? ' × ' + won(p) + (q ? ' = ' + won(q * p) : '') : ''); }
+function saleSum(e) { return e.items.reduce(function (a, i) { return a + pnum(i.qty) * pnum(i.price); }, 0); }
 function render() {
   drawCal();
   var rows = S.entries.filter(match);
@@ -658,6 +708,12 @@ function render() {
         (e.address2 ? (e.address ? '<br>' : '') + '<span class="addr2">' + rich(e.address2) + '</span>' : ''));
       add('내용', e.items.map(itemText).join('\n'));
       add('소장', e.chief); add('인원', e.workers, rich(e.workers).replace(/ \/ /g, '<br>')); add('기타', e.note);
+    } else if (e.kind === 'sale') {
+      add('업체명', e.company);
+      if (e.address) add('배송주소', 1, '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>');
+      var sum = saleSum(e);
+      add('품목', 1, rich(e.items.map(saleLine).join('\n')) + (sum ? '<span class="sum">합계 ' + won(sum) + '</span>' : ''));
+      add('비고', e.note);
     } else {
       add('내용', e.items.map(itemText).join('\n')); add('비고', e.note);
     }
@@ -802,7 +858,7 @@ function drawCal() {
   for (var i = 0; i < start; i++) h += '<div></div>';
   for (var dd = 1; dd <= days; dd++) {
     var k = CAL.y + '-' + ('0' + (CAL.m + 1)).slice(-2) + '-' + ('0' + dd).slice(-2), ty = map[k] || {};
-    var dots = ['시공일정', '보수일정', '화성본드'].filter(function (x) { return ty[x]; }).map(function (x) { return '<i class="dot d-' + x + '"></i>'; }).join('');
+    var dots = ['시공일정', '보수일정', '화성본드', '자재판매'].filter(function (x) { return ty[x]; }).map(function (x) { return '<i class="dot d-' + x + '"></i>'; }).join('');
     h += '<button class="cal-d' + (k === td ? ' today' : '') + (S.day === k ? ' sel' : '') + (dots ? ' has' : '') + '" data-d="' + k + '"' + (dots ? '' : ' tabindex="-1"') + '><span>' + dd + '</span><em>' + dots + '</em></button>';
   }
   $('calGrid').innerHTML = h;
@@ -1107,6 +1163,10 @@ function shareText(e) {
     L.push('담당자 : ' + [e.client, e.manager].filter(String).join(' '), '업체명 : ' + e.company, '현장명 : ' + e.site, '주소 : ' + [e.address, e.address2].filter(String).join(' / '),
       '내용 : ' + e.items.map(itemText).join(', '), '소장 : ' + e.chief, '인원 : ' + e.workers);
     if (e.note) L.push('기타 :\n' + e.note);
+  } else if (e.kind === 'sale') {
+    L.push('업체명 : ' + e.company, '현장명 : ' + e.site, '배송주소 : ' + e.address, '품목 :\n' + e.items.map(saleLine).join('\n'));
+    if (saleSum(e)) L.push('합계 : ' + won(saleSum(e)));
+    if (e.note) L.push('비고 :\n' + e.note);
   } else {
     if (e.site) L.push(e.site);
     L.push(e.items.map(itemText).join(', '));
@@ -1148,36 +1208,44 @@ $('btnReload').onclick = function () { var b = $('btnReload'); if (b.classList.c
 function setType(t) {
   F.type = t;
   document.querySelectorAll('#seg .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.t === t); });
-  var bond = t === '화성본드';
-  document.querySelectorAll('.only-total').forEach(function (el) { el.classList.toggle('hide', bond); });
-  $('lblItems').textContent = bond ? '품목 (품목/규격 · 단위 · 수량)' : '내용 (내역 · 단위 · 수량)';
-  $('lblNote').textContent = bond ? '비고' : '기타';
+  var bond = t === '화성본드', sale = t === '자재판매';
+  document.querySelectorAll('.only-total').forEach(function (el) { el.classList.toggle('hide', bond || (sale && !el.classList.contains('also-sale'))); });
+  $('lblItems').textContent = sale ? '품목 (품목 · 단위 · 수량 · 단가)' : bond ? '품목 (품목/규격 · 단위 · 수량)' : '내용 (내역 · 단위 · 수량)';
+  $('lblNote').textContent = bond || sale ? '비고' : '기타';
+  $('lblCompany').textContent = sale ? '업체명 *' : '업체명';
+  $('lblAddr').innerHTML = sale ? '배송주소' : '주소 <span class="hint">· 네이버지도에서 검색되는 주소</span>';
+  $('fAddr').placeholder = sale ? '예: 경기 화성시 ○○로 12' : '예: 서울 중구 장충단로 275';
+  $('btnAddItem').textContent = bond || sale ? '＋ 품목 추가' : '＋ 내역 추가';
   if (F.days) syncPerDay();
   var cur = readItems(); $('items').innerHTML = ''; (cur.length ? cur : [{}]).forEach(addItem);
 }
 function addItem(it) {
   it = it || {};
-  var bond = F.type === '화성본드';
-  var div = document.createElement('div'); div.className = 'item'; // 단가는 웹앱에서 받지 않고 시트에서만 입력합니다
+  var bond = F.type === '화성본드', sale = F.type === '자재판매';
+  var div = document.createElement('div'); div.className = 'item' + (sale ? ' sale' : ''); // 단가는 웹앱에서 받지 않고 시트에서만 입력합니다
   // 화성본드는 설정 탭 D열의 품목/규격 중에서 고릅니다.
   var bondList = bond && S.cfg.bondItems && S.cfg.bondItems.length ? S.cfg.bondItems : null;
   div.innerHTML = (bondList
     ? '<select class="i-name"><option value="">품목/규격 선택</option>' + bondList.map(function (b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') + '</select>'
-    : '<input class="i-name" placeholder="' + (bond ? '예: 250본드' : '예: LVT 시공') + '">') +
+    : '<input class="i-name" placeholder="' + (sale ? '품목' : bond ? '예: 250본드' : '예: LVT 시공') + '">') +
     '<input class="i-unit" data-sug="units" autocomplete="off" placeholder="단위">' +
     '<input class="i-qty" inputmode="decimal" placeholder="수량">' +
+    (sale ? '<input class="i-price" inputmode="decimal" placeholder="단가">' : '') + // 단가는 자재판매에서만 받습니다
     '<button title="내역 삭제">×</button>';
   var nm = div.querySelector('.i-name');
   if (nm.tagName === 'SELECT' && it.name && !Array.prototype.some.call(nm.options, function (o) { return o.value === it.name; })) {
     var op = document.createElement('option'); op.value = op.textContent = it.name; nm.appendChild(op); // 목록에 없는 예전 값도 그대로 보여 줍니다
   }
   nm.value = it.name || ''; div.querySelector('.i-unit').value = it.unit || ''; div.querySelector('.i-qty').value = it.qty || '';
+  if (sale) div.querySelector('.i-price').value = it.price || '';
   div.querySelector('button').onclick = function () { if (document.querySelectorAll('#items .item').length > 1) div.remove(); };
   $('items').appendChild(div);
 }
 function readItems() {
   return Array.prototype.map.call(document.querySelectorAll('#items .item'), function (d) {
-    return { name: d.querySelector('.i-name').value.trim(), unit: d.querySelector('.i-unit').value.trim(), qty: d.querySelector('.i-qty').value.trim() };
+    var o = { name: d.querySelector('.i-name').value.trim(), unit: d.querySelector('.i-unit').value.trim(), qty: d.querySelector('.i-qty').value.trim() };
+    var p = d.querySelector('.i-price'); if (p) o.price = p.value.trim();
+    return o;
   }).filter(function (i) { return i.name || i.qty; });
 }
 function drawWorkers(selected) {
@@ -1430,9 +1498,10 @@ $('seg').onclick = function (ev) { var b = ev.target.closest('.chip'); if (b) se
 $('btnAddItem').onclick = function () { addItem({}); };
 
 $('btnSave').onclick = function () {
-  var bond = F.type === '화성본드';
+  var sale = F.type === '자재판매', bond = F.type === '화성본드' || sale; // bond: 시공 · 보수일정이 아닌 글
   if (!$('fDate').value) { toast('일자를 입력해 주세요'); return; }
   if (!bond && !$('fSite').value.trim()) { toast('현장명을 입력해 주세요'); return; }
+  if (sale && !$('fCompany').value.trim()) { toast('업체명을 입력해 주세요'); return; }
   var end = $('fEnd').value;
   if (!bond && end && end < $('fDate').value) { toast('종료일이 일자보다 빠릅니다'); return; }
   var d = {
@@ -1604,6 +1673,29 @@ $('devList').onclick = function (ev) {
     .then(function () { toast(b.dataset.da === 'ok' ? '기기를 승인했습니다' : '기기를 삭제했습니다'); loadDevices(); })
     .catch(function (e) { toast('오류: ' + e.message); loadDevices(); });
 };
+/* ---------- 화면 모드 (라이트 · 다크 · 시스템 설정) — 이 기기에만 저장 ---------- */
+var THEME = store('hia_theme') || 'system';
+var darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches: false };
+function applyTheme() {
+  var dark = THEME === 'dark' || (THEME !== 'light' && darkMQ.matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  $('metaTheme').setAttribute('content', dark ? '#0e1124' : '#eef1fb');
+  document.querySelectorAll('#themeMenu button').forEach(function (b) { b.classList.toggle('on', b.dataset.m === THEME); b.setAttribute('aria-checked', b.dataset.m === THEME); });
+}
+if (darkMQ.addEventListener) darkMQ.addEventListener('change', applyTheme); else if (darkMQ.addListener) darkMQ.addListener(applyTheme);
+$('btnTheme').onclick = function (ev) {
+  ev.stopPropagation();
+  var m = $('themeMenu'), r = this.getBoundingClientRect();
+  if (m.classList.toggle('on')) { m.style.top = (r.bottom + 8) + 'px'; m.style.right = Math.max(8, document.documentElement.clientWidth - r.right - 60) + 'px'; }
+};
+$('themeMenu').onclick = function (ev) {
+  var b = ev.target.closest('button[data-m]'); if (!b) return;
+  THEME = b.dataset.m; store('hia_theme', THEME); applyTheme(); this.classList.remove('on');
+  toast({ light: '라이트 모드', dark: '다크 모드', system: '시스템 설정을 따릅니다' }[THEME]);
+};
+document.addEventListener('click', function (ev) { if (!ev.target.closest('#themeMenu')) $('themeMenu').classList.remove('on'); });
+window.addEventListener('scroll', function () { $('themeMenu').classList.remove('on'); }, { passive: true });
+applyTheme();
 $('sub').textContent = '접속코드 필요';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });

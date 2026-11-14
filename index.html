@@ -541,8 +541,8 @@
     </div>
     <div class="only-total also-sale"><label class="f" id="lblCompany">업체명</label><input id="fCompany"></div>
     <label class="f">현장명</label><input id="fSite">
-    <div class="only-total also-sale"><label class="f" id="lblAddr">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
-    <div class="only-total"><label class="f">세부주소 <span class="hint">· 층수, 게이트 등 (시트에는 안 들어감)</span></label><input id="fAddr2" placeholder="예: 32층 / 2번 게이트 / 1층에 스타벅스"></div>
+    <div class="only-total also-sale" id="addrBox"><label class="f" id="lblAddr">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
+    <div class="only-total" id="addr2Box"><label class="f">세부주소 <span class="hint">· 층수, 게이트 등 (시트에는 안 들어감)</span></label><input id="fAddr2" placeholder="예: 32층 / 2번 게이트 / 1층에 스타벅스"></div>
 
     <label class="f" id="lblItems">내용 (내역 · 단위 · 수량)</label>
     <div id="items"></div>
@@ -710,9 +710,9 @@ function render() {
       add('소장', e.chief); add('인원', e.workers, rich(e.workers).replace(/ \/ /g, '<br>')); add('기타', e.note);
     } else if (e.kind === 'sale') {
       add('업체명', e.company);
-      if (e.address) add('배송주소', 1, '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>');
       var sum = saleSum(e);
       add('품목', 1, rich(e.items.map(saleLine).join('\n')) + (sum ? '<span class="sum">합계 ' + won(sum) + '</span>' : ''));
+      if (e.address) add('배송주소', 1, '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>');
       add('비고', e.note);
     } else {
       add('내용', e.items.map(itemText).join('\n')); add('비고', e.note);
@@ -1164,8 +1164,9 @@ function shareText(e) {
       '내용 : ' + e.items.map(itemText).join(', '), '소장 : ' + e.chief, '인원 : ' + e.workers);
     if (e.note) L.push('기타 :\n' + e.note);
   } else if (e.kind === 'sale') {
-    L.push('업체명 : ' + e.company, '현장명 : ' + e.site, '배송주소 : ' + e.address, '품목 :\n' + e.items.map(saleLine).join('\n'));
+    L.push('업체명 : ' + e.company, '현장명 : ' + e.site, '품목 :\n' + e.items.map(saleLine).join('\n'));
     if (saleSum(e)) L.push('합계 : ' + won(saleSum(e)));
+    L.push('배송주소 : ' + e.address);
     if (e.note) L.push('비고 :\n' + e.note);
   } else {
     if (e.site) L.push(e.site);
@@ -1216,6 +1217,8 @@ function setType(t) {
   $('lblAddr').innerHTML = sale ? '배송주소' : '주소 <span class="hint">· 네이버지도에서 검색되는 주소</span>';
   $('fAddr').placeholder = sale ? '예: 경기 화성시 ○○로 12' : '예: 서울 중구 장충단로 275';
   $('btnAddItem').textContent = bond || sale ? '＋ 품목 추가' : '＋ 내역 추가';
+  // 자재판매는 배송주소를 품목 아래 · 비고 위에 둡니다
+  if (sale) $('lblNote').parentNode.insertBefore($('addrBox'), $('lblNote')); else $('addr2Box').parentNode.insertBefore($('addrBox'), $('addr2Box'));
   if (F.days) syncPerDay();
   var cur = readItems(); $('items').innerHTML = ''; (cur.length ? cur : [{}]).forEach(addItem);
 }

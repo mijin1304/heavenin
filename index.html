@@ -342,7 +342,7 @@
   .gate-card p { margin: 4px 0 14px; font-size: 14px; color: var(--sub); }
   #gatePhone { text-align: center; font-size: 18px; letter-spacing: 1px; }
   .icon-btn.dev-btn { display: none; margin-left: 8px; }
-  body.role-editor .icon-btn.dev-btn { display: inline-block; }
+  body.role-admin .icon-btn.dev-btn { display: inline-block; }
   .dev-note { margin: 0 0 6px; font-size: 13.5px; color: var(--sub); }
   .dev-name { margin: 14px 0 6px; font-size: 14px; font-weight: 600; color: var(--sub); }
   .dev-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.6); }
@@ -378,7 +378,7 @@
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
     <button class="icon-btn" id="btnReload">새로고침</button>
-    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 관리 (편집자)">기기</button>
+    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 승인·관리 (관리자)">기기</button>
   </header>
 
   <nav class="tabs glass" id="tabs">
@@ -509,7 +509,7 @@
 <div class="sheet-bg" id="devBg">
   <section class="sheet glass">
     <h3>등록 기기 관리<button class="mini" id="devClose">닫기</button></h3>
-    <p class="dev-note">편집자의 새 기기는 여기서 [승인]해야 쓸 수 있습니다. 쓰지 않거나 잃어버린 기기는 [삭제]하면 바로 접속이 끊깁니다.</p>
+    <p class="dev-note">모든 새 기기는 관리자가 [승인]해야 쓸 수 있습니다. 쓰지 않거나 잃어버린 기기는 [삭제]하면 바로 접속이 끊깁니다. (시트 설정 탭의 승인 칸에 체크해도 됩니다)</p>
     <div id="devList"></div>
   </section>
 </div>
@@ -546,7 +546,7 @@ function devLabel() {
   var app = navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
   return d + (app ? ' · 홈화면 앱' : /CriOS|Chrome|Edg/.test(u) ? ' · 크롬' : /Safari/.test(u) ? ' · 사파리' : '');
 }
-var PENDING_MSG = '이 기기는 승인 대기 중입니다. 이미 쓰고 있는 편집자 기기에서 [기기] 버튼을 눌러 승인해 주세요.';
+var PENDING_MSG = '이 기기는 관리자 승인을 기다리고 있습니다. 승인되면 접속코드로 다시 들어와 주세요.';
 var API = 'https://script.google.com/macros/s/AKfycbyi7qyGBloWlyzilhxT63JSwaMWUuLksYX4km49evavfQyUwipPIyp7XZw1uhlkQKvF1A/exec';
 function call(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
@@ -578,6 +578,7 @@ function load(cb) {
     document.body.classList.toggle('role-viewer', !!(S.user && S.user.role === 'viewer'));
     document.body.classList.toggle('role-contrib', !!(S.user && S.user.role === 'contributor'));
     document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
+    document.body.classList.toggle('role-admin', !!(S.user && S.user.admin));
     render();
     if (cb) cb(true);
   }).catch(function (e) {
@@ -591,7 +592,7 @@ function load(cb) {
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock(why) {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
-  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib', 'role-editor'); $('devBg').classList.remove('on');
+  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib', 'role-editor', 'role-admin'); $('devBg').classList.remove('on');
   S.day = null; S.bibleDate = ''; applyLayout();
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   gateStep(false, why || '접속코드를 다시 입력해 주세요');
@@ -1530,7 +1531,7 @@ $('gateForm').onsubmit = function (ev) {
   S.code = v; enter();
 };
 
-/* ---------- 등록 기기 관리 (편집자) ---------- */
+/* ---------- 등록 기기 승인·관리 (관리자) ---------- */
 function openDevices() { $('devBg').classList.add('on'); $('devList').innerHTML = '<p class="dev-note">불러오는 중…</p>'; loadDevices(); }
 function loadDevices() {
   call('listDevices').then(function (list) {

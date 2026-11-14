@@ -340,8 +340,17 @@
   @keyframes rise { to { opacity: 1; transform: none; } }
   .gate-card h2 { margin: 0; font-size: 20px; font-weight: 700; }
   .gate-card p { margin: 4px 0 14px; font-size: 14px; color: var(--sub); }
+  #gatePhone { text-align: center; font-size: 18px; letter-spacing: 1px; }
+  .icon-btn.dev-btn { display: none; margin-left: 8px; }
+  body.role-editor .icon-btn.dev-btn { display: inline-block; }
+  .dev-note { margin: 0 0 6px; font-size: 13.5px; color: var(--sub); }
+  .dev-name { margin: 14px 0 6px; font-size: 14px; font-weight: 600; color: var(--sub); }
+  .dev-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.6); }
+  .dev-row .dl { flex: 1; min-width: 0; }
+  .dev-row small { display: block; font-size: 12.5px; color: var(--sub); }
+  .dev-wait { color: #b45309; font-weight: 600; }
   #gateCode { text-align: center; font-size: 20px; letter-spacing: 6px; -webkit-text-security: disc; }
-  #gateCode.shake { animation: shake .4s; border-color: var(--red); }
+  #gateCode.shake, #gatePhone.shake { animation: shake .4s; border-color: var(--red); }
   @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
   .gate-msg { min-height: 20px; margin-top: 8px; font-size: 13.5px; color: var(--red); }
   @media (prefers-reduced-motion: reduce) {
@@ -356,7 +365,8 @@
     <div class="gate-shadow"></div>
     <form class="gate-card glass" id="gateForm" autocomplete="off">
       <h2>헤븐인 업무일정</h2>
-      <p>접속코드를 입력해 주세요</p>
+      <p id="gateHint">접속코드를 입력해 주세요</p>
+      <input id="gatePhone" class="hide" type="tel" inputmode="tel" autocomplete="tel" placeholder="휴대폰 번호 (예: 010-1234-5678)" aria-label="휴대폰 번호">
       <input id="gateCode" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="접속코드" aria-label="접속코드">
       <button class="primary" id="gateBtn" type="submit">들어가기</button>
       <div class="gate-msg" id="gateMsg"></div>
@@ -368,6 +378,7 @@
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
     <button class="icon-btn" id="btnReload">새로고침</button>
+    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 관리 (편집자)">기기</button>
   </header>
 
   <nav class="tabs glass" id="tabs">
@@ -495,6 +506,14 @@
   </section>
 </div>
 
+<div class="sheet-bg" id="devBg">
+  <section class="sheet glass">
+    <h3>등록 기기 관리<button class="mini" id="devClose">닫기</button></h3>
+    <p class="dev-note">편집자의 새 기기는 여기서 [승인]해야 쓸 수 있습니다. 쓰지 않거나 잃어버린 기기는 [삭제]하면 바로 접속이 끊깁니다.</p>
+    <div id="devList"></div>
+  </section>
+</div>
+
 <div class="viewer" id="viewer"><img id="viewImg" alt="사진"></div>
 <div class="toast" id="toast"></div>
 <div class="sug" id="sug"></div>
@@ -511,13 +530,30 @@ function rich(s) { return esc(s).replace(/(01[016789][- ]?\d{3,4}[- ]?\d{4})/g, 
 function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('on'); }, 2600); }
 function today() { return ymd(new Date()); }
 function nice(d) { if (!/^\d{4}-\d{2}-\d{2}/.test(d)) return d; var x = new Date(d.slice(0, 10) + 'T00:00:00'); return x.getFullYear() + '년 ' + (x.getMonth() + 1) + '월 ' + x.getDate() + '일 (' + WD[x.getDay()] + ')'; }
+// 기기 열쇠: 이 기기(브라우저)에만 저장되는 임의 값. 서버는 이 값으로 등록된 기기인지 확인합니다.
+var DEV = (function () {
+  var t = store('hia_dev');
+  if (t.length < 16) {
+    var a = new Uint8Array(16); (window.crypto || window.msCrypto).getRandomValues(a);
+    t = Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    store('hia_dev', t);
+  }
+  return t;
+})();
+function devLabel() {
+  var u = navigator.userAgent, d = /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) ? '아이패드' : /iPhone/.test(u) ? '아이폰' :
+    /Android/.test(u) ? (/Mobile/.test(u) ? '안드로이드폰' : '안드로이드 태블릿') : /Windows/.test(u) ? '윈도우 PC' : /Macintosh/.test(u) ? '맥' : '기기';
+  var app = navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  return d + (app ? ' · 홈화면 앱' : /CriOS|Chrome|Edg/.test(u) ? ' · 크롬' : /Safari/.test(u) ? ' · 사파리' : '');
+}
+var PENDING_MSG = '이 기기는 승인 대기 중입니다. 이미 쓰고 있는 편집자 기기에서 [기기] 버튼을 눌러 승인해 주세요.';
 var API = 'https://script.google.com/macros/s/AKfycbyi7qyGBloWlyzilhxT63JSwaMWUuLksYX4km49evavfQyUwipPIyp7XZw1uhlkQKvF1A/exec';
 function call(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ fn: fn, code: S.code, args: args })
+    body: JSON.stringify({ fn: fn, code: S.code, dev: DEV, args: args })
   }).then(function (r) {
     if (!r.ok) throw new Error('서버 응답 오류 (' + r.status + ')');
     return r.json();
@@ -541,22 +577,24 @@ function load(cb) {
     applyLayout();
     document.body.classList.toggle('role-viewer', !!(S.user && S.user.role === 'viewer'));
     document.body.classList.toggle('role-contrib', !!(S.user && S.user.role === 'contributor'));
+    document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
     render();
     if (cb) cb(true);
   }).catch(function (e) {
     var msg = String(e && e.message || e);
     if (msg.indexOf('AUTH') >= 0) { if (cb) cb(false, '접속코드가 맞지 않습니다'); else lock(); return; }
+    if (msg === 'DEVICE' || msg === 'PENDING') { if (cb) cb(false, msg); else lock(msg === 'PENDING' ? PENDING_MSG : '이 기기의 등록이 해제되었습니다. 다시 들어와 주세요.'); return; }
     $('sub').textContent = '불러오지 못했습니다';
     if (cb) cb(false, msg); else toast('오류: ' + msg);
   });
 }
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
-function lock() {
+function lock(why) {
   S.code = ''; S.entries = []; S.imgs = {}; $('list').innerHTML = '';
-  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib');
+  S.user = null; document.body.classList.remove('role-viewer', 'role-contrib', 'role-editor'); $('devBg').classList.remove('on');
   S.day = null; S.bibleDate = ''; applyLayout();
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
-  $('gateMsg').textContent = '접속코드를 다시 입력해 주세요';
+  gateStep(false, why || '접속코드를 다시 입력해 주세요');
 }
 
 function match(e) {
@@ -1445,17 +1483,81 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', sugP
 // 접속코드는 저장하지 않습니다. 웹앱을 열 때마다 입력해야 내용이 보입니다.
 // 접속코드를 입력하는 동안 서버를 미리 깨워 두어 들어가는 시간을 줄입니다.
 fetch(API + '?ping=1', { mode: 'no-cors' }).catch(function () {});
+// 접속 화면: ① 접속코드 → (처음 쓰는 기기면) ② 휴대폰 번호로 기기 등록
+var GATE = { phone: false };
+function gateStep(phone, msg) {
+  GATE.phone = phone;
+  $('gatePhone').classList.toggle('hide', !phone);
+  $('gateCode').classList.toggle('hide', phone);
+  $('gateHint').textContent = phone ? '처음 쓰는 기기입니다. 본인 휴대폰 번호를 입력해 주세요' : '접속코드를 입력해 주세요';
+  $('gateBtn').textContent = phone ? '기기 등록' : '들어가기';
+  $('gateMsg').textContent = msg || '';
+}
+function gateShake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); el.focus(); }
+function enter() {
+  var box = $('gateCode'), btn = $('gateBtn');
+  btn.disabled = true; btn.textContent = '확인 중…'; $('gateMsg').textContent = '';
+  load(function (ok, msg) {
+    btn.disabled = false; box.value = '';
+    if (ok) { gateStep(false); $('gate').classList.add('off'); box.blur(); return; }
+    if (msg === 'DEVICE') { gateStep(true); $('gatePhone').focus(); return; } // 접속코드는 맞음 → 기기 등록 단계
+    S.code = '';
+    gateStep(false, msg === 'PENDING' ? PENDING_MSG : msg);
+    if (msg !== 'PENDING') gateShake(box);
+  });
+}
 $('gateForm').onsubmit = function (ev) {
   ev.preventDefault();
-  var box = $('gateCode'), btn = $('gateBtn'), v = box.value.trim();
-  if (!v) { box.focus(); return; }
-  S.code = v; btn.disabled = true; btn.textContent = '확인 중…'; $('gateMsg').textContent = '';
-  load(function (ok, msg) {
-    btn.disabled = false; btn.textContent = '들어가기'; box.value = '';
-    if (ok) { $('gate').classList.add('off'); box.blur(); return; }
-    S.code = ''; $('gateMsg').textContent = msg;
-    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); box.focus();
-  });
+  var btn = $('gateBtn');
+  if (GATE.phone) {
+    var pb = $('gatePhone'), ph = pb.value.replace(/\D/g, '');
+    if (ph.length < 10) { $('gateMsg').textContent = '휴대폰 번호를 정확히 입력해 주세요'; gateShake(pb); return; }
+    btn.disabled = true; btn.textContent = '확인 중…'; $('gateMsg').textContent = '';
+    call('registerDevice', ph, devLabel()).then(function (st) {
+      pb.value = '';
+      if (st === '승인') { enter(); return; }
+      S.code = ''; btn.disabled = false; gateStep(false, PENDING_MSG);
+    }).catch(function (e) {
+      var m = String(e && e.message || e);
+      btn.disabled = false; btn.textContent = '기기 등록';
+      if (m.indexOf('AUTH') >= 0) { S.code = ''; gateStep(false, '접속코드가 맞지 않습니다'); return; }
+      $('gateMsg').textContent = m; gateShake(pb);
+    });
+    return;
+  }
+  var v = $('gateCode').value.trim();
+  if (!v) { $('gateCode').focus(); return; }
+  S.code = v; enter();
+};
+
+/* ---------- 등록 기기 관리 (편집자) ---------- */
+function openDevices() { $('devBg').classList.add('on'); $('devList').innerHTML = '<p class="dev-note">불러오는 중…</p>'; loadDevices(); }
+function loadDevices() {
+  call('listDevices').then(function (list) {
+    if (!list.length) { $('devList').innerHTML = '<p class="dev-note">등록된 기기가 없습니다.</p>'; return; }
+    var by = {}, order = [];
+    list.forEach(function (d) { if (!by[d.name]) { by[d.name] = []; order.push(d.name); } by[d.name].push(d); });
+    $('devList').innerHTML = order.map(function (n) {
+      return '<div class="dev-name">' + esc(n) + ' (' + by[n].length + '대)</div>' + by[n].map(function (d) {
+        return '<div class="dev-row"><div class="dl"><b>' + esc(d.label) + '</b>' + (d.me ? ' · 지금 이 기기' : '') +
+          '<small>' + esc(d.created) + ' 등록 · ' + (d.status === '승인' ? '사용 중' : '<span class="dev-wait">승인 대기</span>') + '</small></div>' +
+          (d.status !== '승인' ? '<button class="mini" data-da="ok" data-r="' + d.row + '" data-i="' + esc(d.id) + '">승인</button>' : '') +
+          (d.me ? '' : '<button class="mini" data-da="del" data-r="' + d.row + '" data-i="' + esc(d.id) + '">삭제</button>') + '</div>';
+      }).join('');
+    }).join('');
+  }).catch(function (e) { $('devList').innerHTML = '<p class="dev-note">불러오지 못했습니다: ' + esc(e.message) + '</p>'; });
+}
+$('btnDev').onclick = openDevices;
+$('devClose').onclick = function () { $('devBg').classList.remove('on'); };
+$('devBg').onclick = function (ev) { if (ev.target === $('devBg')) $('devBg').classList.remove('on'); };
+$('devList').onclick = function (ev) {
+  var b = ev.target.closest('button[data-da]');
+  if (!b) return;
+  if (b.dataset.da === 'del' && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = '정말 삭제?'; setTimeout(function () { b.dataset.sure = ''; b.textContent = '삭제'; }, 3500); return; }
+  b.disabled = true;
+  call(b.dataset.da === 'ok' ? 'approveDevice' : 'removeDevice', +b.dataset.r, b.dataset.i)
+    .then(function () { toast(b.dataset.da === 'ok' ? '기기를 승인했습니다' : '기기를 삭제했습니다'); loadDevices(); })
+    .catch(function (e) { toast('오류: ' + e.message); loadDevices(); });
 };
 $('sub').textContent = '접속코드 필요';
 if ('serviceWorker' in navigator) {

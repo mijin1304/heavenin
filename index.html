@@ -53,7 +53,23 @@
   .logo { width: 44px; height: 44px; border-radius: 14px; background: var(--navy); color: var(--gold); display: grid; place-items: center; font-size: 13px; letter-spacing: .5px; flex: none; }
   header.top h1 { font-size: 19px; margin: 0; font-weight: 700; }
   header.top p { margin: 0; font-size: 13px; color: var(--sub); }
-  .icon-btn { margin-left: auto; border: 1px solid var(--line); background: var(--glass-strong); border-radius: 14px; height: 44px; padding: 0 14px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+  header.top > div { min-width: 0; }
+  header.top h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn {
+    flex: none; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: auto;
+    border-radius: 16px; border: 1px solid rgba(255,255,255,.75); color: var(--navy); cursor: pointer;
+    background: linear-gradient(145deg, rgba(255,255,255,.88), rgba(255,255,255,.42));
+    -webkit-backdrop-filter: blur(14px) saturate(150%); backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(255,255,255,.95), inset 0 -1px 0 rgba(120,130,180,.12);
+    transition: transform .15s ease, box-shadow .2s ease, background .2s ease; -webkit-tap-highlight-color: transparent;
+  }
+  .icon-btn svg { width: 22px; height: 22px; display: block; }
+  .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(255,255,255,.95); background: linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,255,255,.55)); }
+  .icon-btn:active { transform: scale(.92); }
+  .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(63,111,224,.25), 0 6px 18px rgba(40,50,110,.14); }
+  .icon-btn.spin svg { animation: icSpin .8s linear infinite; }
+  @keyframes icSpin { to { transform: rotate(360deg); } }
+  .icon-btn.dev-btn svg rect { fill: var(--navy); }
 
   .tabs { display: flex; gap: 6px; padding: 6px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
@@ -341,8 +357,8 @@
   .gate-card h2 { margin: 0; font-size: 20px; font-weight: 700; }
   .gate-card p { margin: 4px 0 14px; font-size: 14px; color: var(--sub); }
   #gatePhone { text-align: center; font-size: 18px; letter-spacing: 1px; }
-  .icon-btn.dev-btn { display: none; margin-left: 8px; }
-  body.role-admin .icon-btn.dev-btn { display: inline-block; }
+  .icon-btn.dev-btn { display: none; margin-left: 0; }
+  body.role-admin .icon-btn.dev-btn { display: grid; }
   .dev-note { margin: 0 0 6px; font-size: 13.5px; color: var(--sub); }
   .dev-name { margin: 14px 0 6px; font-size: 14px; font-weight: 600; color: var(--sub); }
   .dev-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.6); }
@@ -377,8 +393,8 @@
   <header class="top glass">
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
-    <button class="icon-btn" id="btnReload">새로고침</button>
-    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 승인·관리 (관리자)">기기</button>
+    <button class="icon-btn" id="btnReload" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.5 3.5v5h-5"/></svg></button>
+    <button class="icon-btn dev-btn" id="btnDev" title="등록 기기 승인·관리 (관리자)" aria-label="기기 승인"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </header>
 
   <nav class="tabs glass" id="tabs">
@@ -587,7 +603,7 @@ function load(cb) {
     if (msg === 'DEVICE' || msg === 'PENDING') { if (cb) cb(false, msg); else lock(msg === 'PENDING' ? PENDING_MSG : '이 기기의 등록이 해제되었습니다. 다시 들어와 주세요.'); return; }
     $('sub').textContent = '불러오지 못했습니다';
     if (cb) cb(false, msg); else toast('오류: ' + msg);
-  });
+  }).then(function () { setTimeout(function () { $('btnReload').classList.remove('spin'); }, 300); });
 }
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock(why) {
@@ -613,7 +629,7 @@ function render() {
   drawCal();
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
-  $('sub').textContent = S.user ? S.user.name + ' · ' + ({ editor: '편집자', contributor: '기여자' }[S.user.role] || '뷰어') : '';
+  $('sub').textContent = S.user ? S.user.name + ' · ' + ((S.user.admin ? '관리자' : { editor: '편집자', contributor: '기여자' }[S.user.role] || '뷰어')) : '';
   if (!rows.length) {
     var viewerNone = S.user && S.user.role === 'viewer' && !S.entries.length;
     $('list').innerHTML = '<div class="empty glass card">' + (viewerNone ? '인원에 \'' + esc(S.user.name) + '\' 이름이 들어간 일정이 없습니다.' : '표시할 글이 없습니다.') + '</div>'; return;
@@ -1116,7 +1132,7 @@ $('viewer').onclick = function () { $('viewer').classList.remove('on'); };
 $('tabs').onclick = function (ev) { var b = ev.target.closest('.tab'); if (!b) return; S.tab = b.dataset.t; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
 $('q').oninput = function () { S.q = this.value.trim(); render(); };
 $('upc').onclick = function () { S.upc = !S.upc; this.classList.toggle('on', S.upc); render(); };
-$('btnReload').onclick = load;
+$('btnReload').onclick = function () { var b = $('btnReload'); if (b.classList.contains('spin')) return; b.classList.add('spin'); load(); };
 
 /* ---------- 글쓰기 ---------- */
 function setType(t) {

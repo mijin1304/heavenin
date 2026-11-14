@@ -273,6 +273,7 @@
   .bref { margin-top: 10px; font-size: 13px; font-weight: 600; color: var(--navy); }
   .blink { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--blue); text-decoration: none; }
   /* 뷰어 권한: 글쓰기 · 수정 · 삭제 버튼을 숨깁니다 */
+  body.role-viewer .tab[data-t="화성본드"] { display: none; } /* 뷰어는 자기 일정만 봅니다 */
   body.role-viewer .fab, body.role-viewer [data-a="edit"], body.role-viewer [data-a="del"], body.role-viewer [data-a="copy"] { display: none !important; }
   /* 기여자: 화성본드만 새 글 · 수정 · 복사 (삭제 불가), 시공 · 보수일정은 댓글만 */
   body.role-contrib [data-a="del"], body.role-contrib article[data-kind="total"] [data-a="edit"], body.role-contrib article[data-kind="total"] [data-a="copy"],
@@ -574,7 +575,10 @@ function render() {
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
   $('sub').textContent = S.user ? S.user.name + ' · ' + ({ editor: '편집자', contributor: '기여자' }[S.user.role] || '뷰어') : '';
-  if (!rows.length) { $('list').innerHTML = '<div class="empty glass card">표시할 글이 없습니다.</div>'; return; }
+  if (!rows.length) {
+    var viewerNone = S.user && S.user.role === 'viewer' && !S.entries.length;
+    $('list').innerHTML = '<div class="empty glass card">' + (viewerNone ? esc(S.user.name) + '님이 인원에 들어간 일정이 없습니다.' : '표시할 글이 없습니다.') + '</div>'; return;
+  }
   var t = today();
   $('list').innerHTML = rows.map(function (e) {
     var range = nice(e.date) + (e.endDate && e.endDate !== e.date ? ' ~ ' + nice(e.endDate) : '');

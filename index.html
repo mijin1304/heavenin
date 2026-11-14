@@ -51,12 +51,11 @@
   }
   header.top { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 12px; }
   .logo { width: 44px; height: 44px; border-radius: 14px; background: var(--navy); color: var(--gold); display: grid; place-items: center; font-size: 13px; letter-spacing: .5px; flex: none; }
-  header.top h1 { font-size: 19px; margin: 0; font-weight: 700; }
+  header.top h1 { font-size: 19px; margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header.top p { margin: 0; font-size: 13px; color: var(--sub); }
   header.top > div { min-width: 0; }
-  header.top h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .icon-btn {
-    flex: none; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: auto;
+    position: relative; flex: none; display: grid; place-items: center; width: 46px; height: 46px; padding: 0; margin-left: auto;
     border-radius: 16px; border: 1px solid rgba(255,255,255,.75); color: var(--navy); cursor: pointer;
     background: linear-gradient(145deg, rgba(255,255,255,.88), rgba(255,255,255,.42));
     -webkit-backdrop-filter: blur(14px) saturate(150%); backdrop-filter: blur(14px) saturate(150%);
@@ -70,7 +69,6 @@
   .icon-btn.spin svg { animation: icSpin .8s linear infinite; }
   @keyframes icSpin { to { transform: rotate(360deg); } }
   .icon-btn.dev-btn svg rect { fill: var(--navy); }
-  .icon-btn { position: relative; }
   .dev-badge {
     position: absolute; top: -6px; right: -6px; display: none; place-items: center; min-width: 21px; height: 21px; padding: 0 5px;
     border-radius: 999px; border: 2px solid #fff; background: linear-gradient(160deg, #f0656b, #d2484f); color: #fff;
@@ -381,6 +379,7 @@
   .gate-msg { min-height: 20px; margin-top: 8px; font-size: 13.5px; color: var(--red); }
   @media (prefers-reduced-motion: reduce) {
     .drop, .gate-logo, .gate-shadow, .gate-card { animation-duration: .01s; animation-delay: 0s; }
+    .icon-btn.dev-btn.has-req, .dev-badge.on { animation: none; }
   }
 </style>
 </head>

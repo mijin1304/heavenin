@@ -577,7 +577,7 @@ function render() {
   $('sub').textContent = S.user ? S.user.name + ' · ' + ({ editor: '편집자', contributor: '기여자' }[S.user.role] || '뷰어') : '';
   if (!rows.length) {
     var viewerNone = S.user && S.user.role === 'viewer' && !S.entries.length;
-    $('list').innerHTML = '<div class="empty glass card">' + (viewerNone ? esc(S.user.name) + '님이 인원에 들어간 일정이 없습니다.' : '표시할 글이 없습니다.') + '</div>'; return;
+    $('list').innerHTML = '<div class="empty glass card">' + (viewerNone ? '인원에 \'' + esc(S.user.name) + '\' 이름이 들어간 일정이 없습니다.' : '표시할 글이 없습니다.') + '</div>'; return;
   }
   var t = today();
   $('list').innerHTML = rows.map(function (e) {

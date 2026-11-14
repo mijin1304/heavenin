@@ -559,11 +559,11 @@
     </div>
     <label class="f" id="lblNote">기타</label><textarea id="fNote" placeholder="1. 도착 시간&#10;2. 주차 안내"></textarea>
 
-    <label class="f">사진 (최대 10장)</label>
-    <div class="thumbs" id="picks" style="margin-top:0;padding-top:6px"></div>
+    <div id="photoBox"><label class="f">사진 (최대 10장)</label>
+    <div class="thumbs" id="picks" style="margin-top:0;padding-top:6px"></div></div>
     <input type="file" id="file" accept="image/*,.heic,.heif" multiple class="hide">
 
-    <div class="only-total">
+    <div class="only-total also-sale">
       <label class="f">파일 첨부 (최대 10개 · 파일당 10MB)</label>
       <div class="flist" id="fFiles"></div>
       <button class="mini" type="button" id="btnAddFile">＋ 파일 추가</button>
@@ -1217,6 +1217,7 @@ function setType(t) {
   $('lblAddr').innerHTML = sale ? '배송주소' : '주소 <span class="hint">· 네이버지도에서 검색되는 주소</span>';
   $('fAddr').placeholder = sale ? '예: 경기 화성시 ○○로 12' : '예: 서울 중구 장충단로 275';
   $('btnAddItem').textContent = bond || sale ? '＋ 품목 추가' : '＋ 내역 추가';
+  $('photoBox').classList.toggle('hide', sale); // 자재판매는 사진 없이 파일 첨부만
   // 자재판매는 배송주소를 품목 아래 · 비고 위에 둡니다
   if (sale) $('lblNote').parentNode.insertBefore($('addrBox'), $('lblNote')); else $('addr2Box').parentNode.insertBefore($('addrBox'), $('addr2Box'));
   if (F.days) syncPerDay();
@@ -1512,14 +1513,15 @@ $('btnSave').onclick = function () {
     client: $('fClient').value, manager: $('fManager').value, company: $('fCompany').value,
     site: $('fSite').value, address: $('fAddr').value, address2: bond ? '' : $('fAddr2').value, items: readItems(),
     chief: $('fChief').value, workers: bond ? '' : workersText(), note: $('fNote').value,
-    author: $('fAuthor').value.trim(), keep: F.keep.map(function (p) { return p.f; }), photos: F.news
+    author: $('fAuthor').value.trim(), keep: F.keep.map(function (p) { return p.f; }), photos: sale ? [] : F.news
   };
-  if (!bond) {
+  var hasFiles = !bond || sale;
+  if (hasFiles) {
     d.keepFiles = F.fkeep.map(function (f) { return f.id; });
     d.files = F.fnews.map(function (f) { return { name: f.name, mime: f.mime, data: f.data }; });
   }
   store('hia_author', d.author);
-  var btn = $('btnSave'); btn.disabled = true; btn.textContent = (!bond && F.fnews.length) ? '파일 올리는 중…' : F.news.length ? '사진 올리는 중…' : '저장 중…';
+  var btn = $('btnSave'); btn.disabled = true; btn.textContent = (hasFiles && F.fnews.length) ? '파일 올리는 중…' : d.photos.length ? '사진 올리는 중…' : '저장 중…';
   call('saveEntry', d).then(function () {
     $('bg').classList.remove('on'); toast(F.id ? '수정했습니다' : '등록했습니다. 시트에 정리되었습니다'); load();
   }).catch(function (e) { toast('저장하지 못했습니다: ' + (e && e.message || e)); })

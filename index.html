@@ -413,6 +413,10 @@
   #gateCode.shake, #gatePhone.shake { animation: shake .4s; border-color: var(--red); }
   @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
   .gate-msg { min-height: 20px; margin-top: 8px; font-size: 13.5px; color: var(--red); }
+  .push-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 12px 12px 12px 16px; border-radius: 18px; font-size: 14.5px; }
+  .push-bar span { flex: 1; min-width: 0; line-height: 1.45; }
+  .push-bar .on-btn { flex: none; border: 0; border-radius: 12px; background: var(--navy); color: #fff; font: inherit; font-size: 14px; padding: 9px 16px; cursor: pointer; }
+  .push-bar .x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 10px; background: transparent; color: var(--sub); font-size: 20px; line-height: 1; cursor: pointer; }
   .gate-msg.ok { color: var(--green); font-weight: 600; font-size: 14.5px; }
   .gate-notify { margin-top: 10px; border: 1px solid var(--line); background: rgba(var(--w),.7); border-radius: 12px; padding: 9px 14px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
   @media (prefers-reduced-motion: reduce) {
@@ -458,6 +462,11 @@
     <button class="tab" data-t="화성본드">화성본드</button>
     <button class="tab ed-only" data-t="자재판매">자재판매</button>
   </nav>
+  <div class="push-bar glass hide" id="pushBar" role="status">
+    <span id="pushTxt">🔔 내가 인원에 들어간 새 일정이 올라오면 알림 받기</span>
+    <button class="on-btn" id="pushOn" type="button">켜기</button>
+    <button class="x" id="pushX" type="button" aria-label="닫기">×</button>
+  </div>
   <div class="tools">
     <input id="q" type="search" placeholder="현장명, 업체명, 주소, 인원 검색">
     <button class="chip" id="upc">다가오는 일정</button>
@@ -652,6 +661,7 @@ function load(cb) {
     document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
     document.body.classList.toggle('role-admin', !!(S.user && S.user.admin));
     setPending(S.user && S.user.admin ? r.pending : 0);
+    pushInit();
     if (S.tab === '자재판매' && !(S.user && S.user.role === 'editor')) { S.tab = '전체'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.t === '전체'); }); }
     render();
     if (cb) cb(true);
@@ -1637,6 +1647,43 @@ $('gateForm').onsubmit = function (ev) {
   if (!v) { $('gateCode').focus(); return; }
   S.code = v; enter();
 };
+
+/* ---------- 새 일정 알림 받기 (웹 푸시) ----------
+   [인원]에 내 이름이 든 시공일정 · 보수일정 새 글이 올라오면 이 기기로 알림이 옵니다. 로그인하지 않아도, 앱을 닫아 두어도 옵니다.
+   아이폰은 홈 화면에 추가한 앱에서만 됩니다(애플 정책). */
+var PUSH = { done: false };
+function pushOk() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function standalone() { return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
+function b64key(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+function pushBar(txt, btn) { $('pushTxt').textContent = txt; $('pushOn').classList.toggle('hide', !btn); $('pushBar').classList.remove('hide'); }
+function pushSubscribe() {
+  return navigator.serviceWorker.ready.then(function (reg) {
+    return reg.pushManager.getSubscription().then(function (sub) {
+      if (sub) return sub;
+      return call('pushKey').then(function (key) { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(key) }); });
+    });
+  }).then(function (sub) { return call('savePush', sub.endpoint); });
+}
+function pushInit() {
+  $('pushBar').classList.add('hide');
+  if (!S.user || PUSH.done) return;
+  if (isIOS() && !standalone()) { // 아이폰 · 아이패드: 홈 화면 앱에서만 알림 가능
+    if (!store('hia_push_x')) pushBar('🔔 아이폰은 이 웹앱을 홈 화면에 추가하면 새 일정 알림을 받을 수 있어요 (공유 버튼 → 홈 화면에 추가)', false);
+    return;
+  }
+  if (!pushOk()) return;
+  if (Notification.permission === 'granted') { PUSH.done = true; pushSubscribe().catch(function () { PUSH.done = false; }); return; } // 이미 켰으면 조용히 등록을 새로 고칩니다
+  if (Notification.permission === 'default' && !store('hia_push_x')) pushBar('🔔 내가 인원에 들어간 새 일정이 올라오면 알림 받기', true);
+}
+$('pushOn').onclick = function () {
+  var b = this; b.disabled = true;
+  Promise.resolve(Notification.requestPermission()).then(function (p) {
+    if (p !== 'granted') { $('pushBar').classList.add('hide'); toast('알림이 꺼져 있습니다. 휴대폰 설정에서 알림을 허용하면 켤 수 있어요'); return; }
+    return pushSubscribe().then(function () { PUSH.done = true; $('pushBar').classList.add('hide'); toast('🔔 알림을 켰습니다'); });
+  }).catch(function (e) { toast('알림을 켜지 못했습니다: ' + (e && e.message || e)); }).then(function () { b.disabled = false; });
+};
+$('pushX').onclick = function () { store('hia_push_x', '1'); $('pushBar').classList.add('hide'); };
 
 /* ---------- 승인 대기 → 승인되면 알려 주기 ---------- */
 // 승인을 기다리는 동안 15초마다(앱으로 돌아올 때도) 이 기기의 승인 여부를 확인합니다. 접속코드는 보관하지 않고 기기 토큰으로만 확인합니다.

@@ -413,6 +413,8 @@
   #gateCode.shake, #gatePhone.shake { animation: shake .4s; border-color: var(--red); }
   @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
   .gate-msg { min-height: 20px; margin-top: 8px; font-size: 13.5px; color: var(--red); }
+  .gate-msg.ok { color: var(--green); font-weight: 600; font-size: 14.5px; }
+  .gate-notify { margin-top: 10px; border: 1px solid var(--line); background: rgba(var(--w),.7); border-radius: 12px; padding: 9px 14px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
   @media (prefers-reduced-motion: reduce) {
     .drop, .gate-logo, .gate-shadow, .gate-card { animation-duration: .01s; animation-delay: 0s; }
     .icon-btn.dev-btn.has-req, .dev-badge.on { animation: none; }
@@ -430,7 +432,8 @@
       <input id="gatePhone" class="hide" type="tel" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" aria-label="휴대폰 번호">
       <input id="gateCode" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="접속코드" aria-label="접속코드">
       <button class="primary" id="gateBtn" type="submit">들어가기</button>
-      <div class="gate-msg" id="gateMsg"></div>
+      <div class="gate-msg" id="gateMsg" role="status" aria-live="polite"></div>
+      <button type="button" class="gate-notify hide" id="gateNotify">🔔 승인되면 알림 받기</button>
     </form>
   </div>
 </div>
@@ -667,6 +670,7 @@ function lock(why) {
   S.day = null; S.bibleDate = ''; applyLayout();
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
   gateStep(false, why || '접속코드를 다시 입력해 주세요');
+  if (why === PENDING_MSG) showPending();
 }
 
 function match(e) {
@@ -1593,6 +1597,7 @@ function gateStep(phone, msg) {
   $('gateHint').textContent = phone ? '처음 쓰는 기기입니다. 본인 휴대폰 번호를 입력해 주세요' : '접속코드를 입력해 주세요';
   $('gateBtn').textContent = phone ? '기기 등록' : '들어가기';
   $('gateMsg').textContent = msg || '';
+  $('gateMsg').classList.remove('ok');
 }
 function gateShake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); el.focus(); }
 function enter() {
@@ -1600,11 +1605,12 @@ function enter() {
   btn.disabled = true; btn.textContent = '확인 중…'; $('gateMsg').textContent = '';
   load(function (ok, msg) {
     btn.disabled = false; box.value = '';
-    if (ok) { gateStep(false); $('gate').classList.add('off'); box.blur(); return; }
+    if (ok) { store('hia_wait', ''); stopWait(); gateStep(false); $('gate').classList.add('off'); box.blur(); return; }
     if (msg === 'DEVICE') { gateStep(true); $('gatePhone').focus(); return; } // 접속코드는 맞음 → 기기 등록 단계
     S.code = '';
-    gateStep(false, msg === 'PENDING' ? PENDING_MSG : msg);
-    if (msg !== 'PENDING') gateShake(box);
+    if (msg === 'PENDING') { showPending(); return; }
+    gateStep(false, msg);
+    gateShake(box);
   });
 }
 $('gateForm').onsubmit = function (ev) {
@@ -1617,7 +1623,7 @@ $('gateForm').onsubmit = function (ev) {
     call('registerDevice', ph, devLabel()).then(function (st) {
       pb.value = '';
       if (st === '승인') { enter(); return; }
-      S.code = ''; btn.disabled = false; gateStep(false, PENDING_MSG);
+      S.code = ''; btn.disabled = false; showPending();
     }).catch(function (e) {
       var m = String(e && e.message || e);
       btn.disabled = false; btn.textContent = '기기 등록';
@@ -1630,6 +1636,46 @@ $('gateForm').onsubmit = function (ev) {
   if (!v) { $('gateCode').focus(); return; }
   S.code = v; enter();
 };
+
+/* ---------- 승인 대기 → 승인되면 알려 주기 ---------- */
+// 승인을 기다리는 동안 15초마다(앱으로 돌아올 때도) 이 기기의 승인 여부를 확인합니다. 접속코드는 보관하지 않고 기기 토큰으로만 확인합니다.
+var APPROVED_MSG = '승인되었으니 접속코드로 로그인해주세요.';
+var WAIT = { t: null };
+function showPending() {
+  store('hia_wait', '1');
+  gateStep(false, PENDING_MSG);
+  $('gateNotify').classList.toggle('hide', !('Notification' in window) || Notification.permission !== 'default');
+  startWait();
+}
+function startWait() { if (!WAIT.t) WAIT.t = setInterval(checkWait, 15000); checkWait(); }
+function stopWait() { clearInterval(WAIT.t); WAIT.t = null; $('gateNotify').classList.add('hide'); }
+function checkWait() {
+  if (!store('hia_wait') || $('gate').classList.contains('off') || S.code) { stopWait(); return; }
+  call('deviceState').then(function (st) {
+    if (!store('hia_wait')) return;
+    if (st === '승인') {
+      store('hia_wait', ''); stopWait();
+      gateStep(false, '✅ ' + APPROVED_MSG); $('gateMsg').classList.add('ok');
+      toast('✅ ' + APPROVED_MSG);
+      try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        var opt = { body: APPROVED_MSG, icon: 'icon-192.png', tag: 'hia-approved' };
+        if (navigator.serviceWorker) navigator.serviceWorker.ready.then(function (r) { return r.showNotification('헤븐인 업무일정', opt); }).catch(function () { try { new Notification('헤븐인 업무일정', opt); } catch (e) {} });
+        else try { new Notification('헤븐인 업무일정', opt); } catch (e) {}
+      }
+      $('gateCode').focus();
+    } else if (st === '') { store('hia_wait', ''); stopWait(); } // 관리자가 등록을 지운 경우
+  }).catch(function () {});
+}
+$('gateNotify').onclick = function () {
+  var b = this;
+  Promise.resolve(Notification.requestPermission()).then(function (p) {
+    b.classList.add('hide');
+    toast(p === 'granted' ? '승인되면 알림으로 알려 드릴게요' : '알림이 꺼져 있어도, 이 화면을 열면 승인 여부가 표시됩니다');
+  });
+};
+document.addEventListener('visibilitychange', function () { if (!document.hidden && store('hia_wait')) checkWait(); });
+if (store('hia_wait')) { gateStep(false, PENDING_MSG); startWait(); }
 
 /* ---------- 등록 기기 승인·관리 (관리자) ---------- */
 // 승인 대기 기기 수를 [승인] 버튼에 빨간 숫자로 보여 주고, 새 요청이 생기면 알려 줍니다. (관리자는 메일로도 알림을 받습니다)

@@ -1236,20 +1236,47 @@ function viewAll(img) {
   $('viewer').classList.add('on');
   viewShow();
 }
+// 큰 사진: 한 번 받으면 이 기기에 보관해(최근 150장) 다음부터는 바로 뜹니다.
+var FULLC = 'hia-full-v1', FULL_MAX = 150;
+function fullStore(fid, url) {
+  if (!window.caches || !/^data:image\//.test(url)) return;
+  caches.open(FULLC).then(function (c) {
+    return c.put('/_f/' + fid, new Response(url)).then(function () { return c.keys(); }).then(function (ks) {
+      if (ks.length > FULL_MAX) ks.slice(0, ks.length - FULL_MAX).forEach(function (k) { c.delete(k); }); // 오래된 것부터 지웁니다
+    });
+  }).catch(function () {});
+}
+function fullLocal(fid) {
+  if (!window.caches) return Promise.resolve('');
+  return caches.open(FULLC).then(function (c) { return c.match('/_f/' + fid); }).then(function (r) { return r ? r.text() : ''; }).catch(function () { return ''; });
+}
 function fullImg(fid) {
   if (!fid) return Promise.resolve('');
   if (S.imgs[fid]) return Promise.resolve(S.imgs[fid]);
   if (!fullImg.p) fullImg.p = {};
-  if (!fullImg.p[fid]) fullImg.p[fid] = call('getImages', [fid]).then(function (m) { delete fullImg.p[fid]; if (m[fid]) S.imgs[fid] = m[fid]; return m[fid] || ''; }).catch(function () { delete fullImg.p[fid]; return ''; });
+  if (!fullImg.p[fid]) fullImg.p[fid] = fullLocal(fid).then(function (u) {
+    if (u) return u;
+    return call('getImages', [fid]).then(function (m) { var x = m[fid] || ''; if (x) fullStore(fid, x); return x; });
+  }).then(function (u) { delete fullImg.p[fid]; if (u) S.imgs[fid] = u; return u; }).catch(function () { delete fullImg.p[fid]; return ''; });
   return fullImg.p[fid];
 }
+// 사진에 손가락이 닿는 순간(누르기 전) 큰 사진을 먼저 받기 시작합니다.
+document.addEventListener('pointerdown', function (ev) { var t = ev.target; if (t && t.classList && t.classList.contains('ph') && t.dataset.f) fullImg(t.dataset.f); }, { passive: true });
 function viewShow() {
   var n = VIEW.list.length, cur = VIEW.list[VIEW.i], k = VIEW.i;
   if (!cur) return;
   $('vCount').textContent = (k + 1) + ' / ' + n;
   $('viewImg').src = S.imgs[cur.f] || cur.t || '';
-  fullImg(cur.f).then(function (u) { if (u && VIEW.i === k && $('viewer').classList.contains('on')) $('viewImg').src = u; });
-  [k + 1, k - 1].forEach(function (j) { var x = VIEW.list[(j + n) % n]; if (x && n > 1) fullImg(x.f); }); // 앞뒤 사진은 미리 받아 둡니다
+  fullImg(cur.f).then(function (u) {
+    if (u && VIEW.i === k && $('viewer').classList.contains('on')) $('viewImg').src = u;
+    if (n < 2) return;
+    // 지금 사진을 띄운 뒤, 넘길 방향 순서(다음 → 이전 → 나머지)로 이 글의 사진을 두 장씩 미리 받아 둡니다
+    var order = [];
+    for (var d = 1; d < n; d++) { order.push(VIEW.list[(k + d) % n]); }
+    order = [order[0], order[order.length - 1]].concat(order.slice(1, -1)).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+    var run = function () { var x = order.shift(); if (x && $('viewer').classList.contains('on')) fullImg(x.f).then(run); };
+    run(); run();
+  });
 }
 function viewStep(d) { var n = VIEW.list.length; if (n < 2) return; VIEW.i = (VIEW.i + d + n) % n; viewShow(); }
 function viewClose() { $('viewer').classList.remove('on'); }

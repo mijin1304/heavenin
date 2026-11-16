@@ -201,6 +201,12 @@
   .viewer .vclose { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: #fff; font-size: 24px; display: grid; place-items: center; cursor: pointer; }
   .viewer .vcount { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(255,255,255,.16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: #fff; font-size: 14px; letter-spacing: 1px; }
   .viewer.one .vbtn, .viewer.one .vcount { display: none; }
+  .viewer .vcount { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 58px); }
+  .viewer .vdl { position: absolute; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.24); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .viewer .vdl button { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 999px; padding: 9px 16px; font: inherit; font-size: 14px; color: #fff; background: rgba(255,255,255,.14); cursor: pointer; white-space: nowrap; }
+  .viewer .vdl button:active { transform: scale(.94); }
+  .viewer .vdl button svg { width: 16px; height: 16px; }
+  .viewer .vdl button[disabled] { opacity: .5; }
   .hide { display: none !important; }
   body:not(.role-editor) .ed-only { display: none !important; } /* 자재판매는 편집자 · 관리자만 */
   .b-자재판매 { background: #e5484d; } .d-자재판매 { background: #e5484d; } /* 달력 점: 빨간색 */
@@ -610,7 +616,7 @@
   </section>
 </div>
 
-<div class="viewer" id="viewer"><img id="viewImg" alt="사진"><button class="vbtn vprev" id="vPrev" type="button" aria-label="이전 사진">‹</button><button class="vbtn vnext" id="vNext" type="button" aria-label="다음 사진">›</button><button class="vclose" id="vClose" type="button" aria-label="닫기">×</button><div class="vcount" id="vCount"></div></div>
+<div class="viewer" id="viewer"><img id="viewImg" alt="사진"><button class="vbtn vprev" id="vPrev" type="button" aria-label="이전 사진">‹</button><button class="vbtn vnext" id="vNext" type="button" aria-label="다음 사진">›</button><button class="vclose" id="vClose" type="button" aria-label="닫기">×</button><div class="vcount" id="vCount"></div><div class="vdl" id="vDl"><button type="button" data-q="orig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 20h14"/></svg>다운로드</button></div></div>
 <div class="toast" id="toast"></div>
 <div class="sug" id="sug"></div>
 
@@ -1231,13 +1237,14 @@ function viewAll(img) {
   var box = img.closest('.thumbs');
   var phs = box ? Array.prototype.slice.call(box.querySelectorAll('img.ph')) : [img];
   VIEW.list = phs.map(function (x) { return { f: x.dataset.f, t: x.src }; });
+  VIEW.box = box;
   VIEW.i = Math.max(0, phs.indexOf(img));
   $('viewer').classList.toggle('one', VIEW.list.length < 2);
   $('viewer').classList.add('on');
   viewShow();
 }
-// 큰 사진: 한 번 받으면 이 기기에 보관해(최근 150장) 다음부터는 바로 뜹니다.
-var FULLC = 'hia-full-v1', FULL_MAX = 150;
+// 큰 사진: 한 번 받으면 이 기기에 보관해(최근 80장) 다음부터는 바로 뜹니다.
+var FULLC = 'hia-full-v1', FULL_MAX = 80;
 function fullStore(fid, url) {
   if (!window.caches || !/^data:image\//.test(url)) return;
   caches.open(FULLC).then(function (c) {
@@ -1280,6 +1287,43 @@ function viewShow() {
 }
 function viewStep(d) { var n = VIEW.list.length; if (n < 2) return; VIEW.i = (VIEW.i + d + n) % n; viewShow(); }
 function viewClose() { $('viewer').classList.remove('on'); }
+/* ---------- 사진 내려받기: [다운로드] = 서버에 저장된 사진 그대로 (새로 올린 사진은 긴 변 2500px) ----------
+   아이폰·아이패드: 공유 창 → '이미지 저장'으로 사진첩에 저장 / 안드로이드·PC: 다운로드 폴더에 저장 (안드로이드는 갤러리 앱 '다운로드' 앨범에도 보임) */
+function b64Blob(url) {
+  var m = String(url).match(/^data:([^;]+);base64,(.*)$/); if (!m) return null;
+  var b = atob(m[2]), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+  return new Blob([a], { type: m[1] });
+}
+function dlName(q) {
+  var card = VIEW.box && VIEW.box.closest('.card'), t = card ? (card.querySelector('h2') || {}).textContent || '' : '';
+  var d = new Date(), z = function (n) { return ('0' + n).slice(-2); };
+  var stamp = d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate());
+  t = String(t).replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 30);
+  return '헤븐인_' + (t ? t + '_' : '') + stamp + '_' + (VIEW.i + 1) + '.jpg';
+}
+function saveBlob(blob, name) {
+  var file = null; try { file = new File([blob], name, { type: 'image/jpeg' }); } catch (e) {}
+  if (isIOS() && file && navigator.canShare && navigator.canShare({ files: [file] })) { // 아이폰: 공유 창에서 '이미지 저장' → 사진첩
+    navigator.share({ files: [file] }).catch(function (e) { if (e && e.name !== 'AbortError') toast('저장하지 못했습니다'); });
+    return;
+  }
+  var u = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+  toast(isMobile() ? '📥 사진을 저장했습니다 (갤러리 · 다운로드)' : '📥 다운로드 폴더에 저장했습니다');
+}
+function isMobile() { return isIOS() || /Android/i.test(navigator.userAgent); }
+$('vDl').onclick = function (ev) {
+  ev.stopPropagation();
+  var b = ev.target.closest('button[data-q]'); if (!b) return;
+  var cur = VIEW.list[VIEW.i]; if (!cur) return;
+  var url = S.imgs[cur.f];
+  if (!url) { // 큰 사진을 아직 받는 중: 받은 뒤 다시 누르도록 안내합니다 (아이폰은 누른 순간에만 공유 창을 열 수 있음)
+    toast('사진을 받는 중입니다. 잠시 후 다시 눌러 주세요'); fullImg(cur.f); return;
+  }
+  var q = b.dataset.q, blob = b64Blob(url); if (!blob) { toast('저장할 수 없는 사진입니다'); return; }
+  saveBlob(blob, dlName(q));
+};
 $('vPrev').onclick = function (ev) { ev.stopPropagation(); viewStep(-1); };
 $('vNext').onclick = function (ev) { ev.stopPropagation(); viewStep(1); };
 $('vClose').onclick = function (ev) { ev.stopPropagation(); viewClose(); };
@@ -1497,7 +1541,7 @@ function loadPic(file) {
     return heicLib().then(function (h) { return h({ blob: file, toType: 'image/jpeg', quality: 0.9 }); })
       .then(function (b) { return imgFrom(Array.isArray(b) ? b[0] : b); });
   }).then(function (im) {
-    return { full: shrink(im, 1600, .82), thumb: shrink(im, 360, .7) };
+    return { full: shrink(im, 2500, .85), thumb: shrink(im, 360, .7) }; // 크게 보기 · 원본 다운로드용은 긴 변 2500px
   }).catch(function () { toast('열 수 없는 사진입니다: ' + file.name); return null; });
 }
 function shrink(img, max, q) {

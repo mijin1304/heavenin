@@ -248,12 +248,13 @@
   .cal-pop .cp-h b { flex: 1; font-size: 16px; font-weight: 700; padding-left: 4px; }
   .cal-pop .cal-d { min-height: 44px; font-size: 14px; }
   .cal-pop .cp-h { height: 40px; }
-  .cal-pop .cp-nav { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border-radius: 12px; cursor: pointer; color: var(--navy);
+  .cp-nav { flex: none; width: 36px; height: 36px; display: grid; place-items: center; padding: 0; border-radius: 12px; cursor: pointer; color: var(--navy);
     border: 1px solid rgba(var(--w),.75); background: linear-gradient(145deg, rgba(var(--w),.9), rgba(var(--w),.45));
     box-shadow: 0 4px 12px rgba(40,50,110,.12), inset 0 1px 0 rgba(var(--w),.95); transition: transform .15s ease, background .2s ease; -webkit-tap-highlight-color: transparent; }
-  .cal-pop .cp-nav svg { width: 20px; height: 20px; stroke-width: 1.9; }
-  .cal-pop .cp-nav:active { transform: scale(.9); }
-  html[data-theme="dark"] .cal-pop .cp-nav { color: #cfd6ff; border-color: rgba(255,255,255,.14); }
+  .cp-nav svg { width: 20px; height: 20px; stroke-width: 1.9; }
+  .cp-nav:active { transform: scale(.9); }
+  .w-h .cp-nav { width: 30px; height: 30px; border-radius: 10px; } .w-h .cp-nav svg { width: 18px; height: 18px; } /* PC 캘린더 위젯 */
+  html[data-theme="dark"] .cp-nav { color: #cfd6ff; border-color: rgba(255,255,255,.14); }
   .cal-pop .cal-d span { width: 28px; height: 28px; }
 
   /* ---------- PC 위젯 (넓은 화면에서만 양옆에 표시) ---------- */
@@ -541,7 +542,7 @@
 <aside class="side side-l">
   <div class="wgrid" id="wl">
     <section class="w glass" data-w="cal" data-size="2x2">
-      <div class="w-h"><span class="w-g">⠿</span><b class="w-t" id="calTitle"></b><button class="w-btn" id="calPrev" aria-label="이전 달">‹</button><button class="w-btn" id="calNext" aria-label="다음 달">›</button><button class="w-btn w-sz" title="크기 바꾸기"></button></div>
+      <div class="w-h"><span class="w-g">⠿</span><b class="w-t" id="calTitle"></b><button class="cp-nav" id="calPrev" aria-label="이전 달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6l-6 6 6 6"/></svg></button><button class="cp-nav" id="calNext" aria-label="다음 달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg></button><button class="w-btn w-sz" title="크기 바꾸기"></button></div>
       <div class="w-b">
         <div class="cal-g" id="calGrid"></div>
         <div class="cal-legend"><span><i class="dot d-시공일정"></i>시공</span><span><i class="dot d-보수일정"></i>보수</span><span class="ed-only"><i class="dot d-화성본드"></i>화성본드</span><span class="ed-only"><i class="dot d-자재판매"></i>자재</span></div>

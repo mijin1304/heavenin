@@ -82,7 +82,7 @@
     box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(var(--w),.95), inset 0 -1px 0 rgba(120,130,180,.12);
     transition: transform .15s ease, box-shadow .2s ease, background .2s ease; -webkit-tap-highlight-color: transparent;
   }
-  .icon-btn svg { width: 22px; height: 22px; display: block; }
+  .icon-btn svg { width: 85%; height: 85%; display: block; stroke-width: 1.8; } /* 버튼 네모의 85% */
   .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(var(--w),.95); background: linear-gradient(145deg, rgba(var(--w),.96), rgba(var(--w),.55)); }
   .icon-btn:active { transform: scale(.92); }
   .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(63,111,224,.25), 0 6px 18px rgba(40,50,110,.14); }
@@ -215,7 +215,7 @@
   .item.sale { grid-template-columns: 1fr 70px 70px 100px 38px; }
   @media (max-width: 520px) { .item.sale { grid-template-columns: 1fr 1fr 1.3fr 38px; } }
   .sum { display: block; margin-top: 2px; font-weight: 600; }
-  @media (max-width: 420px) { header.top { gap: 8px; padding: 12px; } .icon-btn { width: 40px; height: 40px; border-radius: 14px; } .icon-btn svg { width: 20px; height: 20px; } }
+  @media (max-width: 420px) { header.top { gap: 8px; padding: 12px; } .icon-btn { width: 40px; height: 40px; border-radius: 14px; } }
   /* 화면 모드 고르기 */
   .theme-menu { position: fixed; z-index: 40; display: none; min-width: 168px; padding: 6px; border-radius: 18px; background: rgba(var(--w),.92); border: 1px solid var(--line);
     -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); box-shadow: 0 16px 36px rgba(20,25,60,.22); }
@@ -236,7 +236,9 @@
   body:not(.role-admin) .admin-only { display: none !important; }
   /* 캘린더 팝업 (모바일 · 좁은 화면) — 넓은 PC 화면은 옆 캘린더 위젯을 씁니다 */
   @media (min-width: 1300px) { #btnCal { display: none; } }
-  #btnCal.on { background: var(--navy); color: #fff; }
+  #btnCal.on, #btnSet.on { background: var(--navy); color: #fff; }
+  #setBell .bl-slash { display: none; }
+  #setBell.off .bl-slash { display: inline; }
   .cal-pop { position: fixed; z-index: 38; left: 50%; width: min(420px, calc(100vw - 24px)); transform: translateX(-50%); display: none; padding: 10px 12px 14px;
     background: var(--glass-strong); }
   .cal-pop.on { display: block; animation: calIn .22s ease; }
@@ -490,7 +492,7 @@
   <button data-m="dark" role="menuitemradio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>다크 모드</button>
   <button data-m="system" role="menuitemradio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="12" rx="2.5"/><path d="M9 20h6M12 16.5V20"/></svg>시스템 설정</button>
   <div class="sm-line"></div><div class="sm-h">알림</div>
-  <button class="sm-row" id="setBell" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>새 일정 알림<span class="sm-v" id="setBellV">꺼짐</span></button>
+  <button class="sm-row off" id="setBell" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/><path class="bl-slash" d="M3.5 3.5l17 17"/></svg>새 일정 알림<span class="sm-v" id="setBellV">꺼짐</span></button>
   <div class="admin-only"><div class="sm-line"></div><div class="sm-h">승인</div>
   <button class="sm-row" id="setDev" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 12.4l3 3 6-6.6"/></svg>기기 승인 관리<span class="sm-n" id="setDevN"></span></button></div>
 </div>
@@ -503,7 +505,7 @@
   <header class="top glass">
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
-    <button class="icon-btn" id="btnCal" title="캘린더" aria-label="캘린더" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg></button>
+    <button class="icon-btn" id="btnCal" title="캘린더" aria-label="캘린더" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="3.6"/><path d="M3 9.2h18M8 2.8v3.4M16 2.8v3.4"/><text id="calDay" x="12" y="18.4" text-anchor="middle" font-size="9" font-weight="700" fill="currentColor" stroke="none" font-family="Pretendard, Gowun Dodum, system-ui, sans-serif"></text></svg></button>
     <button class="icon-btn" id="btnReload" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.5 3.5v5h-5"/></svg></button>
     <button class="icon-btn set-btn" id="btnSet" title="설정" aria-label="설정" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1z"/></svg><span class="dev-badge" id="devBadge"></span></button>
   </header>
@@ -968,6 +970,12 @@ function calOpen(on) {
 }
 $('btnCal').onclick = function (ev) { ev.stopPropagation(); calOpen(!$('calPop').classList.contains('on')); };
 $('calPop').addEventListener('click', function (ev) { ev.stopPropagation(); }); // 팝업 안을 누르면(날짜 · 달 넘기기) 닫히지 않게
+// 캘린더 버튼 아이콘에 오늘 날짜를 넣고, 자정이 지나면 바꿉니다
+function calIcon() { var d = String(new Date().getDate()); if ($('calDay').textContent !== d) $('calDay').textContent = d; }
+calIcon(); setInterval(calIcon, 60000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) calIcon(); });
+// 설정 메뉴가 열려 있는 동안 설정 버튼 색을 반전합니다 (캘린더 버튼과 같게)
+new MutationObserver(function () { $('btnSet').classList.toggle('on', $('setMenu').classList.contains('on')); }).observe($('setMenu'), { attributes: true, attributeFilter: ['class'] });
 window.addEventListener('resize', function () { if ($('calPop').classList.contains('on')) calPlace(); });
 $('dayChip').onclick = function () { S.day = null; render(); };
 

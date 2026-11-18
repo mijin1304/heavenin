@@ -1,7 +1,7 @@
 // 헤븐인 업무일정 앱 설치용 서비스워커
 // 화면 파일은 항상 최신본을 먼저 받고, 인터넷이 끊겼을 때만 저장본을 보여 줍니다.
 // 글 데이터는 저장하지 않습니다. 사진 미리보기는 화면이 따로 보관합니다(hia-thumbs).
-var CACHE = 'heavenin-v4';
+var CACHE = 'heavenin-v5';
 var SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon.png', 'logo-full.png'];
 
 self.addEventListener('install', function (e) {
@@ -41,10 +41,19 @@ self.addEventListener('push', function (e) {
     return Promise.all(list.slice(0, 3).map(function (n) {
       return self.registration.showNotification(n.title || '헤븐인 업무일정', { body: n.body || '', tag: 'hia-' + n.id, icon: 'icon-192.png', badge: 'icon-192.png', data: { url: './' } });
     }));
-  }));
+  }).then(appBadge));
 });
+// 홈 화면 앱 아이콘의 빨간 숫자 배지 = 아직 확인하지 않은 알림 수 (앱을 열면 0으로 지웁니다)
+function appBadge() {
+  return self.registration.getNotifications().then(function (list) {
+    var n = list.length, nav = self.navigator;
+    if (!nav || !nav.setAppBadge) return;
+    return n ? nav.setAppBadge(n) : nav.clearAppBadge();
+  }).catch(function () {});
+}
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
+  appBadge();
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
     for (var i = 0; i < list.length; i++) if ('focus' in list[i]) return list[i].focus();
     return self.clients.openWindow('./');

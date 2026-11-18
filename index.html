@@ -725,7 +725,7 @@ function load(cb) {
     document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
     document.body.classList.toggle('role-admin', !!(S.user && S.user.admin));
     setPending(S.user && S.user.admin ? r.pending : 0);
-    pushInit();
+    pushInit(); badgeClear();
     if (S.tab === '자재판매' && !(S.user && S.user.role === 'editor')) { S.tab = '전체'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.t === '전체'); }); }
     render();
     if (cb) cb(true);
@@ -982,6 +982,14 @@ $('calPop').addEventListener('click', function (ev) { ev.stopPropagation(); }); 
 // 캘린더 버튼 아이콘에 오늘 날짜를 넣고, 자정이 지나면 바꿉니다
 function calIcon() { var d = String(new Date().getDate()); if ($('calDay').textContent !== d) $('calDay').textContent = d; }
 calIcon(); setInterval(calIcon, 60000);
+// 앱을 열면 아이콘의 빨간 숫자 배지를 지우고, 알림 센터에 남은 이 앱 알림도 정리합니다
+function badgeClear() {
+  if (document.hidden || !S.user) return;
+  try { if (navigator.clearAppBadge) navigator.clearAppBadge().catch(function () {}); } catch (e) {}
+  if (navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(function (r) { return r && r.getNotifications ? r.getNotifications() : []; }).then(function (l) { l.forEach(function (n) { n.close(); }); }).catch(function () {});
+}
+document.addEventListener('visibilitychange', badgeClear);
+window.addEventListener('focus', badgeClear);
 document.addEventListener('visibilitychange', function () { if (!document.hidden) calIcon(); });
 // 설정 메뉴가 열려 있는 동안 설정 버튼 색을 반전합니다 (캘린더 버튼과 같게)
 new MutationObserver(function () { $('btnSet').classList.toggle('on', $('setMenu').classList.contains('on')); }).observe($('setMenu'), { attributes: true, attributeFilter: ['class'] });

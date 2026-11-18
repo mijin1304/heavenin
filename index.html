@@ -82,7 +82,8 @@
     box-shadow: 0 6px 18px rgba(40,50,110,.14), inset 0 1px 0 rgba(var(--w),.95), inset 0 -1px 0 rgba(120,130,180,.12);
     transition: transform .15s ease, box-shadow .2s ease, background .2s ease; -webkit-tap-highlight-color: transparent;
   }
-  .icon-btn svg { width: 85%; height: 85%; display: block; stroke-width: 1.8; } /* 버튼 네모의 85% */
+  .icon-btn svg { width: 85%; height: 85%; display: block; stroke-width: 1.55; } /* 버튼 네모의 85% */
+  #btnReload svg, #btnSet svg { width: 74%; height: 74%; } /* 새로고침 · 설정은 조금 작게 */
   .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(var(--w),.95); background: linear-gradient(145deg, rgba(var(--w),.96), rgba(var(--w),.55)); }
   .icon-btn:active { transform: scale(.92); }
   .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(63,111,224,.25), 0 6px 18px rgba(40,50,110,.14); }
@@ -1862,14 +1863,22 @@ function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navig
 function standalone() { return navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); }
 function b64key(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); s += '==='.slice((s.length + 3) % 4); var b = atob(s), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
 function pushBar(txt, btn) { $('pushTxt').textContent = txt; $('pushOn').classList.toggle('hide', !btn); $('pushBar').classList.remove('hide'); }
-function pushSubscribe() {
+// 알림 서버 공개키는 한 번 받으면 기기에 보관해 다음부터 서버를 기다리지 않습니다
+function pushKeyGet() { var k = store('hia_vapid'); return k ? Promise.resolve(k) : call('pushKey').then(function (x) { store('hia_vapid', x); return x; }); }
+// quick=true면 이 기기에서 구독이 끝나는 즉시 돌려주고, 서버 저장(savePush)은 뒤에서 마칩니다
+function pushSubscribe(quick) {
   return navigator.serviceWorker.ready.then(function (reg) {
     return reg.pushManager.getSubscription().then(function (sub) {
       if (sub) return sub;
-      return call('pushKey').then(function (key) { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(key) }); });
+      return pushKeyGet().then(function (key) { return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(key) }); });
     });
-  }).then(function (sub) { return call('savePush', sub.endpoint); });
+  }).then(function (sub) {
+    var save = call('savePush', sub.endpoint);
+    if (!quick) return save;
+    save.catch(function (e) { bellSet('off'); toast('알림을 켜지 못했습니다: ' + (e && e.message || e)); });
+  });
 }
+var BELLQ = Promise.resolve(); // 켜기 · 끄기를 빠르게 연달아 눌러도 순서대로 처리합니다
 function bellSet(st) { var b = $('setBell'); b.classList.remove('on', 'off', 'ask'); b.classList.add(st); $('setBellV').textContent = st === 'on' ? '켜짐' : st === 'ask' ? '켜기' : '꺼짐'; }
 function bellRefresh() {
   if (!pushOk()) { bellSet('off'); return; }
@@ -1903,19 +1912,24 @@ $('setBell').onclick = function (ev) {
   if (isIOS() && !standalone()) { toast('아이폰은 홈 화면에 추가한 앱에서만 알림을 받을 수 있어요 (공유 버튼 → 홈 화면에 추가)'); return; }
   if (!pushOk()) { toast('이 브라우저는 알림을 지원하지 않아요'); return; }
   if (Notification.permission === 'denied') { toast('휴대폰 설정에서 이 앱의 알림을 허용해 주세요'); return; }
-  if (b.classList.contains('on')) { // 끄기: 이 기기의 구독을 지웁니다
-    navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
-      store('hia_push_off', '1'); PUSH.done = false;
+  if (b.classList.contains('on')) { // 끄기: 화면은 바로 '꺼짐'으로 바꾸고, 구독 삭제는 뒤에서 합니다
+    bellSet('off'); store('hia_push_off', '1'); PUSH.done = false; toast('🔕 알림을 껐습니다');
+    BELLQ = BELLQ.then(function () { return navigator.serviceWorker.ready; }).then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
       if (!sub) return;
       var ep = sub.endpoint;
-      return sub.unsubscribe().then(function () { return call('removePush', ep).catch(function () {}); });
-    }).then(function () { bellSet('off'); toast('🔕 알림을 껐습니다'); }).catch(function (e) { toast('알림을 끄지 못했습니다: ' + (e && e.message || e)); });
+      return sub.unsubscribe().then(function () { call('removePush', ep).catch(function () {}); });
+    }).catch(function (e) { toast('알림을 끄지 못했습니다: ' + (e && e.message || e)); bellRefresh(); });
     return;
   }
-  b.disabled = true; // 켜기
+  var go = function () { // 켜기: 화면은 바로 '켜짐'으로 바꾸고, 실패하면 되돌립니다
+    bellSet('on'); store('hia_push_off', ''); PUSH.done = true; $('pushBar').classList.add('hide'); toast('🔔 알림을 켰습니다');
+    BELLQ = BELLQ.then(function () { return pushSubscribe(true); }).catch(function (e) { bellSet('off'); toast('알림을 켜지 못했습니다: ' + (e && e.message || e)); });
+  };
+  if (Notification.permission === 'granted') { go(); return; }
+  b.disabled = true; // 처음 한 번은 휴대폰의 허용 창이 뜹니다
   Promise.resolve(Notification.requestPermission()).then(function (p) {
     if (p !== 'granted') { bellRefresh(); toast('알림이 꺼져 있습니다. 휴대폰 설정에서 알림을 허용하면 켤 수 있어요'); return; }
-    return pushSubscribe().then(function () { store('hia_push_off', ''); PUSH.done = true; $('pushBar').classList.add('hide'); bellSet('on'); toast('🔔 알림을 켰습니다'); });
+    go();
   }).catch(function (e) { toast('알림을 켜지 못했습니다: ' + (e && e.message || e)); }).then(function () { b.disabled = false; });
 };
 $('pushX').onclick = function () { store('hia_push_x', '1'); $('pushBar').classList.add('hide'); };

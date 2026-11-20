@@ -769,7 +769,7 @@ function render() {
   drawCal();
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
-  $('sub').textContent = S.user ? S.user.name + ' · ' + ((S.user.admin ? '관리자' : { editor: '편집자', contributor: '기여자' }[S.user.role] || '뷰어')) : '';
+  $('sub').textContent = S.user ? S.user.name + ' · ' + ((S.user.admin ? '관리자' : { editor: 'CEO', contributor: '직원' }[S.user.role] || '시공기사')) : '';
   if (!rows.length) {
     var viewerNone = S.user && S.user.role === 'viewer' && !S.entries.length;
     $('list').innerHTML = '<div class="empty glass card">' + (viewerNone ? '인원에 \'' + esc(S.user.name) + '\' 이름이 들어간 일정이 없습니다.' : '표시할 글이 없습니다.') + '</div>'; return;
@@ -1708,7 +1708,7 @@ $('attach').onchange = function () {
 function openForm(e) {
   var role = S.user ? S.user.role : 'editor';
   if (role === 'viewer') { toast('보기 권한만 있어 글을 쓰거나 고칠 수 없습니다'); return; }
-  if (role === 'contributor' && e && e.type !== '화성본드') { toast('기여자는 화성본드 글만 쓰고 고칠 수 있습니다'); return; }
+  if (role === 'contributor' && e && e.type !== '화성본드') { toast('직원은 화성본드 글만 쓰고 고칠 수 있습니다'); return; }
   F.id = e ? e.id : ''; F.keep = e ? e.photos.slice() : []; F.news = [];
   F.fkeep = e && e.files ? e.files.slice() : []; F.fnews = []; drawFiles();
   $('ftitle').textContent = e ? '글 수정' : '새 글 쓰기';

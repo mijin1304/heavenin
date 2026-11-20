@@ -769,7 +769,7 @@ function render() {
   drawCal();
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
-  $('sub').textContent = S.user ? S.user.name + ' · ' + ((S.user.admin ? '관리자' : { editor: 'CEO', contributor: '직원' }[S.user.role] || '시공기사')) : '';
+  $('sub').textContent = S.user ? S.user.name + ' · ' + ((S.user.admin ? '관리자' : { editor: '임원', contributor: '직원' }[S.user.role] || '시공기사')) : '';
   if (!rows.length) {
     var viewerNone = S.user && S.user.role === 'viewer' && !S.entries.length;
     $('list').innerHTML = '<div class="empty glass card">' + (viewerNone ? '인원에 \'' + esc(S.user.name) + '\' 이름이 들어간 일정이 없습니다.' : '표시할 글이 없습니다.') + '</div>'; return;

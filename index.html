@@ -83,7 +83,38 @@
     transition: transform .15s ease, box-shadow .2s ease, background .2s ease; -webkit-tap-highlight-color: transparent;
   }
   .icon-btn svg { width: 85%; height: 85%; display: block; stroke-width: 1.55; } /* 버튼 네모의 85% */
-  #btnCal svg, #btnReload svg, #btnSet svg { width: 74%; height: 74%; } /* 세 아이콘 같은 크기 · 같은 선 두께 */
+  #btnCal svg, #btnNews svg, #btnSet svg { width: 74%; height: 74%; } /* 세 아이콘 같은 크기 · 같은 선 두께 */
+  #btnNews { position: relative; } #btnNews.on { background: var(--navy); color: #fff; }
+  /* 새소식 팝업 */
+  .news-pop { position: fixed; z-index: 38; left: 50%; width: min(440px, calc(100vw - 24px)); transform: translateX(-50%); display: none; padding: 12px 10px 10px; background: var(--glass-strong); }
+  .news-pop.on { display: block; animation: calIn .22s ease; }
+  .news-pop .np-h { display: flex; align-items: baseline; gap: 8px; padding: 2px 6px 8px; }
+  .news-pop .np-h b { font-size: 16px; font-weight: 700; } .news-pop .np-h span { font-size: 12px; color: var(--sub); }
+  .news-list { max-height: min(62vh, 520px); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+  .nw { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; font: inherit; color: inherit; padding: 10px 12px; border-radius: 14px; cursor: pointer;
+    border: 1px solid rgba(var(--w),.7); background: rgba(var(--w),.55); transition: transform .12s ease, background .2s ease; }
+  .nw:active { transform: scale(.98); }
+  .nw.new { background: rgba(var(--w),.9); border-color: rgba(76,110,230,.35); }
+  .nw .nk { flex: none; margin-top: 2px; font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 8px; color: #fff; white-space: nowrap; }
+  .nw .nk.k-post { background: #3f6fe0; } .nw .nk.k-cmt { background: #1f9d6b; } .nw .nk.k-edit { background: #8a6bd6; }
+  .nw .nb { min-width: 0; flex: 1; }
+  .nw .n1 { display: flex; gap: 6px; align-items: baseline; font-size: 12px; color: var(--sub); }
+  .nw .n1 .nt { margin-left: auto; white-space: nowrap; }
+  .nw .n2 { font-size: 15px; font-weight: 600; margin-top: 2px; word-break: keep-all; }
+  .nw .n3 { font-size: 13px; color: var(--sub); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .nw.new .n2::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--red); vertical-align: 2px; }
+  .news-empty { padding: 26px 10px; text-align: center; color: var(--sub); font-size: 14px; }
+  html[data-theme="dark"] .nw { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); }
+  html[data-theme="dark"] .nw.new { background: rgba(255,255,255,.12); border-color: rgba(140,160,255,.35); }
+  .card.flash { animation: cardFlash 1.6s ease; }
+  @keyframes cardFlash { 0%, 60% { box-shadow: 0 0 0 3px rgba(76,110,230,.55), 0 10px 30px rgba(40,50,110,.18); } 100% { box-shadow: none; } }
+  /* 화면을 아래로 당겨 새로고침 */
+  html, body { overscroll-behavior-y: contain; }
+  .ptr { position: fixed; z-index: 37; left: 50%; top: calc(env(safe-area-inset-top) + 6px); width: 42px; height: 42px; margin-left: -21px; border-radius: 50%; display: grid; place-items: center; color: var(--navy);
+    background: var(--glass-strong); border: 1px solid rgba(var(--w),.8); box-shadow: 0 6px 18px rgba(40,50,110,.18); transform: translateY(-60px); opacity: 0; pointer-events: none; }
+  .ptr svg { width: 22px; height: 22px; }
+  .ptr.go svg { animation: icSpin .8s linear infinite; }
+  html[data-theme="dark"] .ptr { color: #cfd6ff; border-color: rgba(255,255,255,.14); }
   .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(var(--w),.95); background: linear-gradient(145deg, rgba(var(--w),.96), rgba(var(--w),.55)); }
   .icon-btn:active { transform: scale(.92); }
   .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(63,111,224,.25), 0 6px 18px rgba(40,50,110,.14); }
@@ -505,6 +536,11 @@
   <div class="admin-only"><div class="sm-line"></div><div class="sm-h">승인</div>
   <button class="sm-row" id="setDev" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7.5 12.4l3 3 6-6.6"/></svg>기기 승인 관리<span class="sm-n" id="setDevN"></span></button></div>
 </div>
+<div class="news-pop glass" id="newsPop" role="dialog" aria-label="새소식">
+  <div class="np-h"><b>새소식</b><span id="newsSub"></span></div>
+  <div class="news-list" id="newsList"></div>
+</div>
+<div class="ptr" id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.5 3.5v5h-5"/></svg></div>
 <div class="cal-pop glass" id="calPop" role="dialog" aria-label="캘린더">
   <div class="cp-h"><b id="calTitle2"></b><button class="cp-nav" id="calPrev2" aria-label="이전 달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6l-6 6 6 6"/></svg></button><button class="cp-nav" id="calNext2" aria-label="다음 달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg></button></div>
   <div class="cal-g" id="calGrid2"></div>
@@ -515,7 +551,7 @@
     <img class="logo" src="icon-512.png" alt="" style="border-radius:50%">
     <div><h1>헤븐인 업무일정</h1><p id="sub">불러오는 중…</p></div>
     <button class="icon-btn" id="btnCal" title="캘린더" aria-label="캘린더" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="3.6"/><path d="M3 9.2h18M8 2.8v3.4M16 2.8v3.4"/><text id="calDay" x="12" y="18.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="currentColor" stroke="none" font-family="Pretendard, Gowun Dodum, system-ui, sans-serif"></text></svg></button>
-    <button class="icon-btn" id="btnReload" title="새로고침" aria-label="새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20.5 3.5v5h-5"/></svg></button>
+    <button class="icon-btn" id="btnNews" title="새소식" aria-label="새소식" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="15.2" text-anchor="middle" font-size="8" font-weight="800" textLength="20.5" lengthAdjust="spacingAndGlyphs" fill="currentColor" font-family="Pretendard, Gowun Dodum, system-ui, sans-serif">NEWS</text></svg><span class="dev-badge" id="newsBadge"></span></button>
     <button class="icon-btn set-btn" id="btnSet" title="설정" aria-label="설정" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1z"/></svg><span class="dev-badge" id="devBadge"></span></button>
   </header>
 
@@ -725,7 +761,7 @@ function load(cb) {
     document.body.classList.toggle('role-editor', !!(S.user && S.user.role === 'editor'));
     document.body.classList.toggle('role-admin', !!(S.user && S.user.admin));
     setPending(S.user && S.user.admin ? r.pending : 0);
-    pushInit(); badgeClear();
+    pushInit(); badgeClear(); newsBadge(); if ($('newsPop').classList.contains('on')) newsDraw();
     if (S.tab === '자재판매' && !(S.user && S.user.role === 'editor')) { S.tab = '전체'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.t === '전체'); }); }
     render();
     if (cb) cb(true);
@@ -735,12 +771,12 @@ function load(cb) {
     if (msg === 'DEVICE' || msg === 'PENDING') { if (cb) cb(false, msg); else lock(msg === 'PENDING' ? PENDING_MSG : '이 기기의 등록이 해제되었습니다. 다시 들어와 주세요.'); return; }
     $('sub').textContent = '불러오지 못했습니다';
     if (cb) cb(false, msg); else toast('오류: ' + msg);
-  }).then(function () { setTimeout(function () { $('btnReload').classList.remove('spin'); }, 300); });
+  }).then(function () { setTimeout(ptrDone, 300); });
 }
 // 접속코드가 바뀌었거나 맞지 않으면 내용을 지우고 접속 화면으로 돌아갑니다.
 function lock(why) {
   var wasCode = S.code;
-  S.code = ''; S.entries = []; calOpen(false); S.imgs = {}; $('list').innerHTML = '';
+  S.code = ''; S.entries = []; calOpen(false); newsOpen(false); S.imgs = {}; $('list').innerHTML = '';
   S.user = null; document.body.classList.remove('role-viewer', 'role-contrib', 'role-editor', 'role-admin'); $('devBg').classList.remove('on'); setPending(0);
   S.day = null; S.bibleDate = ''; applyLayout();
   $('bg').classList.remove('on'); $('gate').classList.remove('off');
@@ -975,10 +1011,85 @@ $('calNext').onclick = $('calNext2').onclick = function (ev) { ev.stopPropagatio
 function calPlace() { var r = document.querySelector('header.top').getBoundingClientRect(); $('calPop').style.top = Math.max(8, r.bottom + 8) + 'px'; }
 function calOpen(on) {
   $('calPop').classList.toggle('on', on); $('btnCal').classList.toggle('on', on); $('btnCal').setAttribute('aria-expanded', on);
-  if (on) { $('setMenu').classList.remove('on'); calPlace(); drawCal(); }
+  if (on) { $('setMenu').classList.remove('on'); if ($('newsPop').classList.contains('on')) newsOpen(false); calPlace(); drawCal(); }
 }
 $('btnCal').onclick = function (ev) { ev.stopPropagation(); calOpen(!$('calPop').classList.contains('on')); };
 $('calPop').addEventListener('click', function (ev) { ev.stopPropagation(); }); // 팝업 안을 누르면(날짜 · 달 넘기기) 닫히지 않게
+/* ---------- 새소식 (NEWS): 내가 볼 수 있는 글의 새 글 · 새 댓글 · 수정을 최근 것부터 ----------
+   볼 수 있는 글은 서버가 권한에 맞게 걸러서 보내 줍니다 (직원: 자재판매 제외 / 시공기사: 인원에 내 이름이 든 시공 · 보수일정만).
+   내가 쓴 글 · 댓글 · 수정은 넣지 않고, 최근 30일 것만 최대 60개 보여 줍니다. */
+function stamp(dt) { var z = function (n) { return ('0' + n).slice(-2); }; return dt.getFullYear() + '-' + z(dt.getMonth() + 1) + '-' + z(dt.getDate()) + ' ' + z(dt.getHours()) + ':' + z(dt.getMinutes()); }
+function newsItems() {
+  if (!S.user) return [];
+  var me = bareName(S.user.name), since = stamp(new Date(Date.now() - 30 * 864e5)), out = [];
+  // 본인 여부는 직함을 뗀 이름으로 봅니다 (예: 예전 글 작성자 '정천기대표' = 지금 로그인이름 '정천기대표이사')
+  var mine = function (n) { var b = bareName(n); return !!b && (b === me || String(n || '').replace(/\s+/g, '') === String(S.user.name || '').replace(/\s+/g, '')); };
+  S.entries.forEach(function (e) {
+    if (S.user.role === 'contributor' && e.kind === 'sale') return; // 직원은 자재판매 제외 (서버에서도 거름)
+    if (e.created && !mine(e.author)) out.push({ t: e.created, k: 'post', e: e, who: e.author });
+    if (e.edited && e.edited > (e.created || '') && !mine(e.editedBy)) out.push({ t: e.edited, k: 'edit', e: e, who: e.editedBy });
+    (e.comments || []).forEach(function (c) { if (c.created && !mine(c.author)) out.push({ t: c.created, k: 'cmt', e: e, c: c, who: c.author }); });
+  });
+  return out.filter(function (x) { return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(x.t) && x.t >= since; })
+    .sort(function (a, b) { return a.t < b.t ? 1 : a.t > b.t ? -1 : 0; }).slice(0, 60);
+}
+function newsSeen() { var v = store('hia_news_seen'); if (!v) { v = stamp(new Date(Date.now() - 864e5)); store('hia_news_seen', v); } return v; }
+function newsBadge() {
+  var seen = newsSeen(), n = newsItems().filter(function (x) { return x.t > seen; }).length, b = $('newsBadge');
+  b.textContent = n > 9 ? '9+' : String(n); b.classList.toggle('on', n > 0);
+  $('btnNews').title = n ? '새소식 ' + n + '건' : '새소식';
+}
+function newsWhen(t) {
+  var now = new Date(), d = new Date(t.replace(' ', 'T') + ':00'), min = Math.round((now - d) / 6e4), hm = t.slice(11, 16);
+  if (min >= 0 && min < 1) return '방금';
+  if (min >= 0 && min < 60) return min + '분 전';
+  if (t.slice(0, 10) === stamp(now).slice(0, 10)) return hm;
+  if (t.slice(0, 10) === stamp(new Date(now - 864e5)).slice(0, 10)) return '어제 ' + hm;
+  return (+t.slice(5, 7)) + '월 ' + (+t.slice(8, 10)) + '일 ' + hm;
+}
+function newsDraw() {
+  var seen = newsSeen(), list = newsItems();
+  $('newsSub').textContent = list.length ? '최근 30일 · ' + list.length + '건' : '';
+  if (!list.length) { $('newsList').innerHTML = '<div class="news-empty">최근 30일 동안 새소식이 없습니다.</div>'; return; }
+  var KL = { post: '새 글', cmt: '댓글', edit: '수정' };
+  $('newsList').innerHTML = list.map(function (x, i) {
+    var e = x.e, sub = '';
+    if (x.k === 'cmt') sub = x.c.text ? x.c.text : '사진 ' + (x.c.photos || []).length + '장';
+    else sub = nice(e.date) + (e.endDate && e.endDate !== e.date ? ' ~ ' + nice(e.endDate) : '') + (e.workers ? ' · 인원 ' + e.workers : '');
+    return '<button type="button" class="nw' + (x.t > seen ? ' new' : '') + '" data-i="' + i + '">' +
+      '<span class="nk k-' + x.k + '">' + KL[x.k] + '</span><span class="nb">' +
+      '<span class="n1"><span>' + esc(e.type) + (x.who ? ' · ' + esc(x.who) : '') + '</span><span class="nt">' + esc(newsWhen(x.t)) + '</span></span>' +
+      '<span class="n2">' + esc(e.site || e.company || e.type) + '</span>' +
+      '<span class="n3">' + esc(sub) + '</span></span></button>';
+  }).join('');
+  $('newsList').onclick = function (ev) {
+    var b = ev.target.closest('.nw'); if (!b) return;
+    var x = list[+b.dataset.i]; if (x) newsGo(x);
+  };
+}
+function newsOpen(on) {
+  $('newsPop').classList.toggle('on', on); $('btnNews').classList.toggle('on', on); $('btnNews').setAttribute('aria-expanded', on);
+  if (on) {
+    calOpen(false); $('setMenu').classList.remove('on');
+    var r = document.querySelector('header.top').getBoundingClientRect(); $('newsPop').style.top = Math.max(8, r.bottom + 8) + 'px';
+    newsDraw(); $('newsList').scrollTop = 0;
+    store('hia_news_seen', stamp(new Date())); newsBadge(); // 열어 보면 읽은 것으로
+  }
+}
+// 새소식을 누르면 그 글로 이동합니다 (댓글이면 댓글 칸도 펼칩니다)
+function newsGo(x) {
+  newsOpen(false);
+  S.tab = '전체'; S.day = null; S.q = ''; $('q').value = ''; S.upc = false; $('upc').classList.remove('on');
+  document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('on', t.dataset.t === '전체'); });
+  render();
+  var card = document.querySelector('#list .card[data-id="' + String(x.e.id).replace(/"/g, '') + '"]');
+  if (!card) { toast('글을 찾지 못했습니다. 아래로 당겨 새로고침해 주세요'); return; }
+  if (x.k === 'cmt') { var box = card.querySelector('.cbox'); if (box) box.classList.remove('hide'); }
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+}
+$('btnNews').onclick = function (ev) { ev.stopPropagation(); newsOpen(!$('newsPop').classList.contains('on')); };
+$('newsPop').addEventListener('click', function (ev) { ev.stopPropagation(); });
 // 캘린더 버튼 아이콘에 오늘 날짜를 넣고, 자정이 지나면 바꿉니다
 function calIcon() { var d = String(new Date().getDate()); if ($('calDay').textContent !== d) $('calDay').textContent = d; }
 calIcon(); setInterval(calIcon, 60000);
@@ -1432,7 +1543,36 @@ document.addEventListener('keydown', function (ev) {
 $('tabs').onclick = function (ev) { var b = ev.target.closest('.tab'); if (!b) return; S.tab = b.dataset.t; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); }); render(); };
 $('q').oninput = function () { S.q = this.value.trim(); render(); };
 $('upc').onclick = function () { S.upc = !S.upc; this.classList.toggle('on', S.upc); render(); };
-$('btnReload').onclick = function () { var b = $('btnReload'); if (b.classList.contains('spin')) return; b.classList.add('spin'); load(); };
+/* ---------- 화면을 아래로 당겨 새로고침 (맨 위에서 아래로 끌었다 놓기) ---------- */
+var PTR = { y0: null, d: 0, busy: false };
+function ptrShow(d, go) {
+  var el = $('ptr'), k = Math.min(1, d / 70);
+  el.style.transition = go === 'snap' ? 'transform .25s ease, opacity .25s ease' : 'none';
+  el.style.opacity = d > 4 ? String(.35 + .65 * k) : '0';
+  el.style.transform = 'translateY(' + (Math.min(d, 90) * 1.5 - 50) + 'px) rotate(' + Math.round(k * 300) + 'deg)';
+}
+function ptrDone() { PTR.busy = false; var el = $('ptr'); el.classList.remove('go'); ptrShow(0, 'snap'); }
+function ptrBlocked(t) { return !S.user || !$('gate').classList.contains('off') || document.querySelector('.sheet-bg.on, .viewer.on, .news-pop.on, .cal-pop.on') || (t && t.closest && t.closest('.news-pop, .cal-pop, .theme-menu, input, textarea')); }
+document.addEventListener('touchstart', function (ev) {
+  PTR.y0 = null; PTR.d = 0;
+  if (PTR.busy || ev.touches.length > 1 || window.scrollY > 0 || ptrBlocked(ev.target)) return;
+  PTR.y0 = ev.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchmove', function (ev) {
+  if (PTR.y0 === null) return;
+  var dy = ev.touches[0].clientY - PTR.y0;
+  if (dy <= 0 || window.scrollY > 0) { if (PTR.d) ptrShow(0, 'snap'); PTR.d = 0; return; }
+  PTR.d = dy * .5; // 손가락보다 조금 덜 따라오게
+  ptrShow(PTR.d);
+  if (ev.cancelable) ev.preventDefault(); // 브라우저 자체 당기기 · 튕김 대신 우리 새로고침을 씁니다
+}, { passive: false });
+document.addEventListener('touchend', function () {
+  if (PTR.y0 === null) return;
+  PTR.y0 = null;
+  if (PTR.d >= 70 && !PTR.busy) { PTR.busy = true; $('ptr').classList.add('go'); ptrShow(70, 'snap'); load(); }
+  else ptrShow(0, 'snap');
+  PTR.d = 0;
+});
 
 /* ---------- 글쓰기 ---------- */
 function setType(t) {
@@ -2065,7 +2205,7 @@ $('btnSet').onclick = function (ev) {
   ev.stopPropagation();
   var m = $('setMenu'), r = this.getBoundingClientRect();
   if (m.classList.toggle('on')) {
-    calOpen(false); if (S.user) bellRefresh();
+    calOpen(false); if ($('newsPop').classList.contains('on')) newsOpen(false); if (S.user) bellRefresh();
     m.style.top = (r.bottom + 8) + 'px'; m.style.right = Math.max(8, document.documentElement.clientWidth - r.right) + 'px';
   }
 };
@@ -2079,6 +2219,7 @@ $('setMenu').onclick = function (ev) {
 document.addEventListener('click', function (ev) {
   if (!ev.target.closest('#setMenu')) $('setMenu').classList.remove('on');
   if ($('calPop').classList.contains('on') && !ev.target.closest('#calPop, #btnCal, #list, #dayChip')) calOpen(false);
+  if ($('newsPop').classList.contains('on') && !ev.target.closest('#newsPop, #btnNews')) newsOpen(false);
 });
 window.addEventListener('scroll', function () { $('setMenu').classList.remove('on'); }, { passive: true });
 applyTheme();

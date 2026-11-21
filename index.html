@@ -118,9 +118,7 @@
   .icon-btn:hover { box-shadow: 0 10px 24px rgba(40,50,110,.2), inset 0 1px 0 rgba(var(--w),.95); background: linear-gradient(145deg, rgba(var(--w),.96), rgba(var(--w),.55)); }
   .icon-btn:active { transform: scale(.92); }
   .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(63,111,224,.25), 0 6px 18px rgba(40,50,110,.14); }
-  .icon-btn.spin svg { animation: icSpin .8s linear infinite; }
   @keyframes icSpin { to { transform: rotate(360deg); } }
-  .icon-btn.dev-btn svg rect { fill: var(--navy); }
   .dev-badge {
     position: absolute; top: -6px; right: -6px; display: none; place-items: center; min-width: 21px; height: 21px; padding: 0 5px;
     border-radius: 999px; border: 2px solid #fff; background: linear-gradient(160deg, #f0656b, #d2484f); color: #fff;
@@ -167,6 +165,9 @@
   .mini { border: 1px solid rgba(120,130,180,.28); background: rgba(var(--w),.6); border-radius: 12px; padding: 7px 12px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
   .mini.danger { color: var(--red); }
   .empty { text-align: center; color: var(--sub); padding: 40px 16px; }
+  .by .arch { color: var(--sub); font-size: 11px; padding: 1px 6px; border-radius: 6px; border: 1px solid rgba(var(--nv),.18); }
+  .more-btn { display: block; width: 100%; margin: 4px 0 90px; padding: 14px; border-radius: 18px; font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); cursor: pointer; }
+  html[data-theme="dark"] .more-btn { color: #cfd6ff; }
 
   .fab { position: fixed; z-index: 5; right: max(16px, calc(50% - 364px)); bottom: calc(20px + env(safe-area-inset-bottom)); height: 58px; padding: 0 24px; border-radius: 999px; border: 0; background: var(--navy); color: #fff; font: inherit; font-size: 17px; box-shadow: 0 12px 28px rgba(35,44,99,.35); cursor: pointer; }
   .fab b { color: var(--gold); font-weight: 700; margin-right: 6px; }
@@ -479,15 +480,6 @@
   .gate-card h2 { margin: 0; font-size: 20px; font-weight: 700; }
   .gate-card p { margin: 4px 0 14px; font-size: 14px; color: var(--sub); }
   #gatePhone { text-align: center; font-size: 18px; letter-spacing: 1px; }
-  .icon-btn.dev-btn { display: none; margin-left: 0; }
-  body.role-admin .icon-btn.dev-btn { display: grid; }
-  .icon-btn.bell-btn { display: grid; }
-  body.role-admin .icon-btn.bell-btn { display: none; }
-  .bell-btn svg .bl-fill, .bell-btn svg .bl-slash, .bell-btn svg .bl-dot { display: none; }
-  .bell-btn.on svg .bl-fill { display: block; }
-  .bell-btn.off svg .bl-slash { display: block; }
-  .bell-btn.ask svg .bl-dot { display: block; fill: var(--red); stroke: none; }
-  .bell-btn.on { color: var(--navy); }
   .dev-note { margin: 0 0 6px; font-size: 13.5px; color: var(--sub); }
   .dev-name { margin: 14px 0 6px; font-size: 14px; font-weight: 600; color: var(--sub); }
   .dev-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(var(--w),.6); }
@@ -801,10 +793,16 @@ function won(n) { return Math.round(n).toLocaleString('ko-KR') + '원'; }
 function pnum(v) { var n = parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isNaN(n) ? 0 : n; }
 function saleLine(i) { var q = pnum(i.qty), p = pnum(i.price); return itemText(i) + (p ? ' × ' + won(p) + (q ? ' = ' + won(q * p) : '') : ''); }
 function saleSum(e) { return e.items.reduce(function (a, i) { return a + pnum(i.qty) * pnum(i.price); }, 0); }
+// 글이 많아도 휴대폰이 느려지지 않게 목록은 100개씩 보여 주고 [더 보기]로 이어 봅니다.
+var PAGE = 100;
+function listKey() { return [S.tab, S.day, S.q, S.upc].join('|'); }
 function render() {
   drawCal();
   var rows = S.entries.filter(match);
   if (S.upc) rows = rows.slice().reverse();
+  if (S.limKey !== listKey()) { S.limKey = listKey(); S.lim = PAGE; } // 탭 · 검색 · 날짜를 바꾸면 처음 100개부터
+  var total = rows.length;
+  rows = rows.slice(0, S.lim || PAGE);
   $('sub').textContent = S.user ? S.user.name + ' · ' + ((S.user.admin ? '관리자' : { editor: '임원', contributor: '직원' }[S.user.role] || '시공기사')) : '';
   if (!rows.length) {
     var viewerNone = S.user && S.user.role === 'viewer' && !S.entries.length;
@@ -838,9 +836,10 @@ function render() {
       '<div class="head"><span class="badge b-' + esc(e.type) + '">' + esc(e.type) + '</span><span class="date">' + esc(range) + '</span>' + (dd ? '<span class="dday">' + dd + '</span>' : '') + '</div>' +
       '<h2>' + esc(e.site || e.company || e.type) + '</h2><dl>' + d.join('') + '</dl>' +
       (th ? '<div class="thumbs">' + th + '</div>' : '') + fileHtml(e) +
-      '<div class="acts"><span class="by">' + esc(e.author || '') + (e.created ? ' · ' + esc(e.created) : '') + '</span>' +
-      '<button class="mini" data-a="cmt">댓글' + ((e.comments || []).length ? ' ' + e.comments.length : '') + '</button><button class="mini" data-a="copy">복사</button><button class="mini" data-a="edit">수정</button><button class="mini danger" data-a="del">삭제</button></div>' + cmtHtml(e) + '</article>';
-  }).join('');
+      '<div class="acts"><span class="by">' + esc(e.author || '') + (e.created ? ' · ' + esc(e.created) : '') + (e.archived ? ' · <span class="arch" title="지난해 글은 시트의 ' + esc(e.archived) + ' 탭에 보관되어 있습니다. 수정은 시트에서 해 주세요.">' + esc(e.archived.replace(/^Total_/, '')) + '년 보관</span>' : '') + '</span>' +
+      '<button class="mini" data-a="cmt">댓글' + ((e.comments || []).length ? ' ' + e.comments.length : '') + '</button><button class="mini" data-a="copy">복사</button>' + (e.archived ? '' : '<button class="mini" data-a="edit">수정</button><button class="mini danger" data-a="del">삭제</button>') + '</div>' + cmtHtml(e) + '</article>';
+  }).join('') + (total > rows.length ? '<button type="button" class="more-btn glass" id="moreBtn">더 보기 (남은 ' + (total - rows.length) + '개)</button>' : '');
+  if ($('moreBtn')) $('moreBtn').onclick = function () { S.lim = (S.lim || PAGE) + PAGE; render(); };
   loadThumbs();
 }
 // 미리보기 사진은 한 번 받으면 이 기기에 보관해 두고 다시 받지 않습니다 (데이터 절약).
@@ -1081,6 +1080,8 @@ function newsGo(x) {
   newsOpen(false);
   S.tab = '전체'; S.day = null; S.q = ''; $('q').value = ''; S.upc = false; $('upc').classList.remove('on');
   document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('on', t.dataset.t === '전체'); });
+  var idx = S.entries.filter(match).indexOf(x.e);
+  S.limKey = listKey(); S.lim = Math.max(PAGE, idx + 1);
   render();
   var card = document.querySelector('#list .card[data-id="' + String(x.e.id).replace(/"/g, '') + '"]');
   if (!card) { toast('글을 찾지 못했습니다. 아래로 당겨 새로고침해 주세요'); return; }

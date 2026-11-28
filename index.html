@@ -647,6 +647,7 @@
     <label class="f">현장명</label><input id="fSite">
     <div class="only-total also-sale" id="addrBox"><label class="f" id="lblAddr">주소 <span class="hint">· 네이버지도에서 검색되는 주소</span></label><input id="fAddr" placeholder="예: 서울 중구 장충단로 275"></div>
     <div class="only-total" id="addr2Box"><label class="f">세부주소 <span class="hint">· 층수, 게이트 등 (시트에는 안 들어감)</span></label><input id="fAddr2" placeholder="예: 32층 / 2번 게이트 / 1층에 스타벅스"></div>
+    <div class="only-total" id="workBox"><label class="f">시공 <span class="hint">· 시트에는 안 들어감</span></label><textarea id="fWork" placeholder="1. 시공 방법&#10;2. 작업 순서"></textarea></div>
 
     <label class="f" id="lblItems">내용 (내역 · 단위 · 수량)</label>
     <div id="items"></div>
@@ -782,7 +783,7 @@ function match(e) {
   if (S.day && !calShow(e)) return false; // 날짜로 볼 때는 캘린더에 보이는 글만
   if (S.upc && (e.endDate || e.date) < today()) return false;
   if (S.q) {
-    var hay = [e.site, e.client, e.manager, e.company, e.address, e.address2, e.workers, e.chief, e.note, e.date, e.items.map(function (i) { return i.name; }).join(' ')].join(' ').toLowerCase();
+    var hay = [e.site, e.client, e.manager, e.company, e.address, e.address2, e.work, e.workers, e.chief, e.note, e.date, e.items.map(function (i) { return i.name; }).join(' ')].join(' ').toLowerCase();
     if (hay.indexOf(S.q.toLowerCase()) < 0) return false;
   }
   return true;
@@ -820,6 +821,7 @@ function render() {
       add('업체명', e.company);
       if (e.address || e.address2) add('주소', 1, (e.address ? '<a href="https://map.naver.com/p/search/' + encodeURIComponent(e.address) + '">' + esc(e.address) + '</a>' : '') +
         (e.address2 ? (e.address ? '<br>' : '') + '<span class="addr2">' + rich(e.address2) + '</span>' : ''));
+      add('시공', e.work);
       add('내용', e.items.map(itemText).join('\n'));
       add('소장', e.chief); add('인원', e.workers, rich(e.workers).replace(/ \/ /g, '<br>')); add('기타', e.note);
     } else if (e.kind === 'sale') {
@@ -1397,6 +1399,7 @@ function shareText(e) {
   if (e.kind === 'total') {
     L.push('담당자 : ' + [e.client, e.manager].filter(String).join(' '), '업체명 : ' + e.company, '현장명 : ' + e.site, '주소 : ' + [e.address, e.address2].filter(String).join(' / '),
       '내용 : ' + e.items.map(itemText).join(', '), '소장 : ' + e.chief, '인원 : ' + e.workers);
+    if (e.work) L.splice(L.length - 3, 0, '시공 :\n' + e.work);
     if (e.note) L.push('기타 :\n' + e.note);
   } else if (e.kind === 'sale') {
     L.push('업체명 : ' + e.company, '현장명 : ' + e.site, '품목 :\n' + e.items.map(saleLine).join('\n'));
@@ -1858,7 +1861,7 @@ function openForm(e) {
   $('fDate').value = e ? e.date : today(); $('fEnd').value = e ? (e.endDate || '') : '';
   $('fClient').value = e ? (e.client || '') : ''; $('fManager').value = e ? (e.manager || '') : '';
   $('fCompany').value = e ? (e.company || '') : ''; $('fSite').value = e ? (e.site || '') : '';
-  $('fAddr').value = e ? (e.address || '') : ''; $('fAddr2').value = e ? (e.address2 || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
+  $('fAddr').value = e ? (e.address || '') : ''; $('fAddr2').value = e ? (e.address2 || '') : ''; $('fWork').value = e ? (e.work || '') : ''; $('fChief').value = e ? (e.chief || '') : '';
   $('fNote').value = e ? (e.note || '') : '';
   $('fAuthor').value = e ? (e.author || '') : (S.user ? S.user.name : store('hia_author'));
   $('items').innerHTML = ''; (e && e.items.length ? e.items : [{}]).forEach(function (i) { F.type = e ? e.type : F.type; addItem(i); });
@@ -1881,7 +1884,7 @@ $('btnSave').onclick = function () {
   var d = {
     id: F.id, type: F.type, date: $('fDate').value, endDate: bond ? '' : end,
     client: $('fClient').value, manager: $('fManager').value, company: $('fCompany').value,
-    site: $('fSite').value, address: $('fAddr').value, address2: bond ? '' : $('fAddr2').value, items: readItems(),
+    site: $('fSite').value, address: $('fAddr').value, address2: bond ? '' : $('fAddr2').value, work: bond ? '' : $('fWork').value, items: readItems(),
     chief: $('fChief').value, workers: bond ? '' : workersText(), note: $('fNote').value,
     author: $('fAuthor').value.trim(), keep: F.keep.map(function (p) { return p.f; }), photos: sale ? [] : F.news
   };
